@@ -443,7 +443,7 @@ ON CONFLICT DO NOTHING;
 -- shift_swaps: sem dados
 
 INSERT INTO public.anotacoes_periodo (id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at)
-SELECT v.id::uuid, v.folguista_id::uuid, v.company_id::uuid, v.periodo_mes::int, v.periodo_ano::int, v.observacao::text, v.status::text, v.financeiro_despesa_id::uuid, v.created_at::timestamptz, v.updated_at::timestamptz
+SELECT v.id::uuid, v.folguista_id::uuid, v.company_id::uuid, v.periodo_mes::int, v.periodo_ano::int, v.observacao::text, v.status::text, CASE WHEN v.financeiro_despesa_id IS NULL THEN NULL WHEN EXISTS (SELECT 1 FROM public.financial_entries WHERE id = v.financeiro_despesa_id::uuid) THEN v.financeiro_despesa_id::uuid ELSE NULL END, v.created_at::timestamptz, v.updated_at::timestamptz
 FROM (VALUES
   ('4dd43fbb-f206-4fa3-bfe5-66d6a051ffa8', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', NULL, 12, 2025, NULL, 'aberto', NULL, '2025-12-17 15:50:41.212354+00', '2025-12-17 15:50:41.212354+00'),
   ('264ce7e3-91ee-4a7e-8432-39875e3ad045', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', NULL, 1, 2026, NULL, 'aberto', NULL, '2026-01-03 12:11:40.807091+00', '2026-01-03 12:11:40.807091+00'),
@@ -454,7 +454,7 @@ ON CONFLICT DO NOTHING;
 
 
 INSERT INTO public.anotacoes_folguista (id, company_id, folguista_id, data_trabalho, local_id, valor, status, observacao, financeiro_despesa_id, data_pagamento, forma_pagamento, created_at, updated_at, periodo_id)
-SELECT v.id::uuid, v.company_id::uuid, v.folguista_id::uuid, v.data_trabalho::date, v.local_id::uuid, v.valor::numeric, v.status::text, v.observacao::text, v.financeiro_despesa_id::uuid, v.data_pagamento::date, v.forma_pagamento::text, v.created_at::timestamptz, v.updated_at::timestamptz, v.periodo_id::uuid
+SELECT v.id::uuid, v.company_id::uuid, v.folguista_id::uuid, v.data_trabalho::date, v.local_id::uuid, v.valor::numeric, v.status::text, v.observacao::text, CASE WHEN v.financeiro_despesa_id IS NULL THEN NULL WHEN EXISTS (SELECT 1 FROM public.financial_entries WHERE id = v.financeiro_despesa_id::uuid) THEN v.financeiro_despesa_id::uuid ELSE NULL END, v.data_pagamento::date, v.forma_pagamento::text, v.created_at::timestamptz, v.updated_at::timestamptz, v.periodo_id::uuid
 FROM (VALUES
   ('0a0d7433-da74-4f19-89e8-1bfe031deda1', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-01-12', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'pago', NULL, NULL, '2026-02-10', 'pix', '2026-01-14 02:12:22.254704+00', '2026-02-10 18:51:58.99248+00', '264ce7e3-91ee-4a7e-8432-39875e3ad045'),
   ('17c980b3-ed22-4efe-9bed-f4f16b269922', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-01-03', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 140.00, 'pago', NULL, NULL, '2026-02-10', 'pix', '2026-01-03 12:12:35.839028+00', '2026-02-10 18:51:58.99248+00', '264ce7e3-91ee-4a7e-8432-39875e3ad045'),
