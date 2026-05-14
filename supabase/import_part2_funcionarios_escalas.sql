@@ -19,18 +19,24 @@ FROM (VALUES
 WHERE EXISTS (SELECT 1 FROM auth.users WHERE id = v.user_id)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.employee_locations (id, employee_id, location_id, is_primary, created_at) VALUES
-  ('b280ae5a-eafc-4e80-916f-c77a57c8fc68', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', false, '2025-12-18 15:18:39.098648+00'),
-  ('e335b9d7-d976-44d4-bb21-66661260b1a5', 'f145d73a-0289-4740-ac34-41ccfb1e03eb', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', false, '2025-12-19 18:08:01.419692+00'),
-  ('e85ab4dc-5816-4762-b35e-eeba47b343f5', '7d1e4299-bc4d-467a-b6a9-e5d827becd11', '5a152705-842b-4a16-b7ec-782c36d10cf9', false, '2025-12-19 18:09:30.298114+00'),
-  ('0261aea6-cf25-4b6c-be96-69ff890f445f', '1d1fb983-f86c-4832-8020-60f07e16e211', 'af38b26f-0811-4153-a1f6-8b182a1b04be', false, '2025-12-20 00:23:55.702998+00'),
-  ('60ac346d-e814-4d36-9af8-84f8dc88b898', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', false, '2025-12-20 12:32:14.21628+00'),
-  ('288126a5-0df1-4834-85ca-4e876b918785', '8d6c03eb-8d46-499b-8f1c-4d080fae70f9', '06e4537d-cc84-4239-a30e-991a6db979e7', false, '2026-01-02 09:27:04.405932+00'),
-  ('bd5cc3b4-9196-402a-b067-b363a3f7c58f', '5d6f9467-6c83-47b6-8cb3-30fce9747a1d', 'af38b26f-0811-4153-a1f6-8b182a1b04be', false, '2026-01-08 17:26:57.431081+00'),
-  ('e9e9c4b7-e074-49c5-bf77-28f5f3727513', 'a97caf28-e705-4f64-b41f-634c3a40c332', '45fb8e55-9d3d-48c6-afcd-1443115ef205', false, '2026-01-31 03:01:56.922078+00')
+INSERT INTO public.employee_locations (id, employee_id, location_id, is_primary, created_at)
+SELECT v.id, v.employee_id, v.location_id, v.is_primary, v.created_at
+FROM (VALUES
+  ('b280ae5a-eafc-4e80-916f-c77a57c8fc68'::uuid, '61ca4e6a-a096-4642-8e56-8a4be4ce429c'::uuid, '06e4537d-cc84-4239-a30e-991a6db979e7'::uuid, false::boolean, '2025-12-18 15:18:39.098648+00'::timestamptz),
+  ('e335b9d7-d976-44d4-bb21-66661260b1a5'::uuid, 'f145d73a-0289-4740-ac34-41ccfb1e03eb'::uuid, '7a56d99e-bbb9-4943-b78b-e45004e02e2f'::uuid, false::boolean, '2025-12-19 18:08:01.419692+00'::timestamptz),
+  ('e85ab4dc-5816-4762-b35e-eeba47b343f5'::uuid, '7d1e4299-bc4d-467a-b6a9-e5d827becd11'::uuid, '5a152705-842b-4a16-b7ec-782c36d10cf9'::uuid, false::boolean, '2025-12-19 18:09:30.298114+00'::timestamptz),
+  ('0261aea6-cf25-4b6c-be96-69ff890f445f'::uuid, '1d1fb983-f86c-4832-8020-60f07e16e211'::uuid, 'af38b26f-0811-4153-a1f6-8b182a1b04be'::uuid, false::boolean, '2025-12-20 00:23:55.702998+00'::timestamptz),
+  ('60ac346d-e814-4d36-9af8-84f8dc88b898'::uuid, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050'::uuid, '7a56d99e-bbb9-4943-b78b-e45004e02e2f'::uuid, false::boolean, '2025-12-20 12:32:14.21628+00'::timestamptz),
+  ('288126a5-0df1-4834-85ca-4e876b918785'::uuid, '8d6c03eb-8d46-499b-8f1c-4d080fae70f9'::uuid, '06e4537d-cc84-4239-a30e-991a6db979e7'::uuid, false::boolean, '2026-01-02 09:27:04.405932+00'::timestamptz),
+  ('bd5cc3b4-9196-402a-b067-b363a3f7c58f'::uuid, '5d6f9467-6c83-47b6-8cb3-30fce9747a1d'::uuid, 'af38b26f-0811-4153-a1f6-8b182a1b04be'::uuid, false::boolean, '2026-01-08 17:26:57.431081+00'::timestamptz),
+  ('e9e9c4b7-e074-49c5-bf77-28f5f3727513'::uuid, 'a97caf28-e705-4f64-b41f-634c3a40c332'::uuid, '45fb8e55-9d3d-48c6-afcd-1443115ef205'::uuid, false::boolean, '2026-01-31 03:01:56.922078+00'::timestamptz)
+) AS v(id, employee_id, location_id, is_primary, created_at)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.fixed_schedules (id, employee_id, location_id, day_of_week, works, start_time, end_time, tolerance_minutes, created_at, updated_at, schedule_type, lunch_start_time, lunch_end_time, notes, template_id, cycle_start_date, requires_lunch) VALUES
+INSERT INTO public.fixed_schedules (id, employee_id, location_id, day_of_week, works, start_time, end_time, tolerance_minutes, created_at, updated_at, schedule_type, lunch_start_time, lunch_end_time, notes, template_id, cycle_start_date, requires_lunch)
+SELECT v.id, v.employee_id, v.location_id, v.day_of_week, v.works, v.start_time, v.end_time, v.tolerance_minutes, v.created_at, v.updated_at, v.schedule_type, v.lunch_start_time, v.lunch_end_time, v.notes, v.template_id, v.cycle_start_date, v.requires_lunch
+FROM (VALUES
   ('956ebdd3-fe6c-4aa7-9cbb-311afd4e8be9', '5d6f9467-6c83-47b6-8cb3-30fce9747a1d', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 0, false, '08:00:00', '22:00:00', 15, '2026-03-09 02:18:11.12614+00', '2026-03-09 02:18:11.12614+00', '12x36', '12:00:00', '13:00:00', NULL, NULL, '2026-01-21', false),
   ('6d731aad-58dd-40fb-8a36-241258add86f', '5d6f9467-6c83-47b6-8cb3-30fce9747a1d', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 1, false, '08:00:00', '22:00:00', 15, '2026-03-09 02:18:11.12614+00', '2026-03-09 02:18:11.12614+00', '12x36', '12:00:00', '13:00:00', NULL, NULL, '2026-01-21', false),
   ('8cf9c4d6-0eff-4617-b2fc-a5b26aceaf42', '5d6f9467-6c83-47b6-8cb3-30fce9747a1d', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 2, false, '08:00:00', '22:00:00', 15, '2026-03-09 02:18:11.12614+00', '2026-03-09 02:18:11.12614+00', '12x36', '12:00:00', '13:00:00', NULL, NULL, '2026-01-21', false),
@@ -73,9 +79,13 @@ INSERT INTO public.fixed_schedules (id, employee_id, location_id, day_of_week, w
   ('41eb8aa2-a853-43bc-a5a3-f131a197a5ef', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 4, true, '08:00:00', '14:30:00', 35, '2026-01-16 17:28:14.714369+00', '2026-01-16 17:28:14.714369+00', 'regular', '12:00:00', '13:00:00', NULL, NULL, NULL, false),
   ('ab06a85e-9965-435c-bf61-562938beaf82', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 5, true, '08:00:00', '14:30:00', 35, '2026-01-16 17:28:14.714369+00', '2026-01-16 17:28:14.714369+00', 'regular', '12:00:00', '13:00:00', NULL, NULL, NULL, false),
   ('2fbbb443-630b-4913-8aaf-242d00fc13dc', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 6, true, '08:00:00', '14:30:00', 35, '2026-01-16 17:28:14.714369+00', '2026-01-16 17:28:14.714369+00', 'regular', '12:00:00', '13:00:00', NULL, NULL, NULL, false)
+) AS v(id, employee_id, location_id, day_of_week, works, start_time, end_time, tolerance_minutes, created_at, updated_at, schedule_type, lunch_start_time, lunch_end_time, notes, template_id, cycle_start_date, requires_lunch)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.punctual_schedules (id, employee_id, location_id, date, start_time, end_time, tolerance_minutes, created_at, updated_at, requires_lunch) VALUES
+INSERT INTO public.punctual_schedules (id, employee_id, location_id, date, start_time, end_time, tolerance_minutes, created_at, updated_at, requires_lunch)
+SELECT v.id, v.employee_id, v.location_id, v.date, v.start_time, v.end_time, v.tolerance_minutes, v.created_at, v.updated_at, v.requires_lunch
+FROM (VALUES
   ('93dae48c-f296-4589-9d76-717f01e4c09b', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2025-12-19', '07:00:00', '19:00:00', 15, '2025-12-19 14:53:16.093607+00', '2025-12-19 14:53:16.093607+00', true),
   ('0dd6055b-6840-49dc-82c3-e203399ade1b', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2025-12-23', '08:00:00', '19:00:00', 15, '2025-12-19 14:53:16.093607+00', '2025-12-23 17:51:12.505073+00', true),
   ('9ed273fe-2815-4cd0-8f26-1868c4b21790', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2025-12-27', '08:00:00', '19:00:00', 15, '2025-12-19 14:53:16.093607+00', '2025-12-23 17:51:24.913735+00', true),
@@ -90,4 +100,6 @@ INSERT INTO public.punctual_schedules (id, employee_id, location_id, date, start
   ('19c15e12-46d6-4241-8c20-bd71bc620ec0', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2026-01-14', '08:00:00', '19:00:00', 15, '2025-12-19 14:53:16.093607+00', '2025-12-23 17:52:52.926681+00', true),
   ('e87421a1-7037-4bec-b3ff-41e7c5223efa', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2026-01-16', '08:00:00', '19:00:00', 15, '2025-12-19 14:53:16.093607+00', '2025-12-23 17:53:03.192936+00', true),
   ('67dbbc88-4c45-44e7-b56a-180ec56e7f6e', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', 'af38b26f-0811-4153-a1f6-8b182a1b04be', '2025-12-25', '09:00:00', '17:00:00', 15, '2025-12-23 23:21:01.736099+00', '2025-12-23 23:21:01.736099+00', true)
+) AS v(id, employee_id, location_id, date, start_time, end_time, tolerance_minutes, created_at, updated_at, requires_lunch)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id)
 ON CONFLICT DO NOTHING;
