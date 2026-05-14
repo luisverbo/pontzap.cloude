@@ -2,7 +2,9 @@
 -- PARTE 3: Registros de Ponto (1092 registros)
 -- ================================================
 
-INSERT INTO public.clock_records (id, employee_id, location_id, type, timestamp, method, latitude, longitude, created_at, is_manual, manual_registered_by, manual_observation) VALUES
+INSERT INTO public.clock_records (id, employee_id, location_id, type, timestamp, method, latitude, longitude, created_at, is_manual, manual_registered_by, manual_observation)
+SELECT v.id::uuid, v.employee_id::uuid, v.location_id::uuid, v.type::clock_type, v.timestamp::timestamptz, v.method::clock_method, v.latitude::float8, v.longitude::float8, v.created_at::timestamptz, v.is_manual::boolean, v.manual_registered_by::uuid, v.manual_observation::text
+FROM (VALUES
   ('0758cc38-73f9-4833-9d18-115cb24f713b', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 'exit', '2025-12-18 17:00:13.659+00', 'gps', -23.0047896145296, -43.3491945133635, '2025-12-18 17:00:14.174429+00', false, NULL, NULL),
   ('bd3de95b-0780-404a-a1a1-56f198cbf96c', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 'entry', '2025-12-19 10:28:11.14+00', 'gps', -23.0049788060455, -43.3487394761053, '2025-12-19 10:28:11.610174+00', false, NULL, NULL),
   ('b5a1f687-4456-4ee8-aee0-bc7975fe8e1e', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 'exit', '2025-12-19 15:29:41.753+00', 'gps', -23.0047336123027, -43.348918872118, '2025-12-19 15:29:42.34112+00', false, NULL, NULL),
@@ -1095,4 +1097,6 @@ INSERT INTO public.clock_records (id, employee_id, location_id, type, timestamp,
   ('c653ee7a-f73e-4967-8d50-f98a6691bb3c', '7d1e4299-bc4d-467a-b6a9-e5d827becd11', '5a152705-842b-4a16-b7ec-782c36d10cf9', 'entry', '2026-05-14 11:35:55.853+00', 'qr', NULL, NULL, '2026-05-14 11:35:55.766474+00', false, NULL, NULL),
   ('751e1daa-9f5f-449f-8a79-302da6a5f227', '1d1fb983-f86c-4832-8020-60f07e16e211', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 'entry', '2026-05-14 12:47:47.82+00', 'qr', NULL, NULL, '2026-05-14 12:47:45.953891+00', false, NULL, NULL),
   ('925ddf21-7160-43a7-b7a1-3add962d4efd', '1d1fb983-f86c-4832-8020-60f07e16e211', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 'lunch_out', '2026-05-14 15:59:06.959+00', 'gps', -23.0027561, -43.3482507, '2026-05-14 15:59:05.217725+00', false, NULL, NULL)
+) AS v(id, employee_id, location_id, type, timestamp, method, latitude, longitude, created_at, is_manual, manual_registered_by, manual_observation)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id::uuid)
 ON CONFLICT DO NOTHING;
