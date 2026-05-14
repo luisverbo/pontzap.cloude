@@ -409,6 +409,39 @@ FROM (VALUES
 WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id::uuid)
 ON CONFLICT DO NOTHING;
 
+
+INSERT INTO public.financial_entries (id, description, category, amount, entry_type, is_recurring, recurrence_type, recurrence_day, due_date, paid_date, status, client_name, notes, created_at, updated_at, company_id, notification_days, notification_sent) VALUES
+  ('9643b183-c014-48ec-adc3-13732fdb8b90', 'Condominio Rosa dos Mares', 'Contrato Mensal', 10960.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-10', 'paid', 'Cond Rosa dos Mares', NULL, '2025-12-10 20:25:55.106194+00', '2025-12-10 20:26:15.436654+00', NULL, 1, false),
+  ('d294c500-ece9-4124-bd27-d7d61f8ea298', 'Panetone Funcionarios', 'Outros', 140.94, 'expense', false, NULL, NULL, '2025-12-18', '2025-12-18', 'paid', NULL, 'Compra de 6 panetones para dar de Natal para os funcionarios', '2025-12-18 23:43:22.396005+00', '2025-12-18 23:43:36.119295+00', NULL, 0, false),
+  ('222ff2a9-2daa-418d-af81-6c97f6f99bb7', 'Condominio Varandas das Rosas', 'Contrato Mensal', 10810.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', 'Contrato Varandas ', NULL, '2025-12-11 13:26:40.734686+00', '2025-12-11 13:28:08.965119+00', NULL, 1, false),
+  ('78f2cf28-fad1-45d3-a580-050b5c693a67', 'Condominio Fuor Sesean', 'Contrato Mensal', 15380.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', 'Contrato Prestação de serviço', NULL, '2025-12-11 13:30:52.143101+00', '2025-12-11 13:30:57.01401+00', NULL, 0, false),
+  ('8f74c84d-bdad-4f78-b0c1-7eecf31ef216', 'Sergio Guradião', 'Salários', 3025.59, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:34:39.762994+00', '2025-12-11 13:34:45.434884+00', NULL, 0, false),
+  ('f84bea5e-17e2-40b0-bfc2-be883c5ce7f1', 'Vitor - Salario', 'Salários', 2305.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:05:16.562231+00', '2026-01-12 13:05:21.49054+00', NULL, 1, false),
+  ('9a117789-d5c6-40ac-ac1b-665fc81d6227', 'Vitor Guardião', 'Salários', 2710.59, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-10 20:29:50.136847+00', '2025-12-11 13:35:39.964207+00', NULL, 0, false),
+  ('faffc4fb-8a4f-4d10-badc-e40ebb8b7b56', 'Daniel Guardião', 'Salários', 2651.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-10 20:27:27.427281+00', '2025-12-11 13:36:13.195258+00', NULL, 1, false),
+  ('db194536-0afb-4b89-a05f-f402b4533ccd', 'Lucas Guardião', 'Salários', 3154.40, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:43:28.819637+00', '2025-12-11 13:43:36.771862+00', NULL, 1, false),
+  ('a0d46a7f-0256-4c8f-ab4a-dfc22de0f5d8', 'Mateus Guardião', 'Salários', 1160.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:44:58.969607+00', '2025-12-11 13:45:05.82271+00', NULL, 0, false),
+  ('bba75db9-9841-409c-8283-bf1a5b9c0cd0', 'Material Piscina', 'Material', 2090.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:46:54.638502+00', '2025-12-11 13:46:58.318828+00', NULL, 0, false),
+  ('01cf8e59-b4bb-4a67-a8c5-5489e66b99d7', 'Contator', 'Impostos', 761.25, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:52:45.410401+00', '2025-12-11 13:52:53.506318+00', NULL, 0, false),
+  ('2109466d-7c17-42d5-a94a-71af254b20d0', 'Cond. Varandas ', 'Contrato Mensal', 11060.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', 'Condominio Varandas das Rosas', NULL, '2026-01-12 12:56:10.041081+00', '2026-01-12 12:56:19.458051+00', NULL, 1, false),
+  ('81809627-a3d1-45d4-9bdd-25be521178da', 'Gysele Guardião', 'Salários', 6571.66, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, 'Nesse Pagamento costa o valor das Férias ', '2025-12-11 13:39:27.862755+00', '2025-12-11 13:56:04.403163+00', NULL, 0, false),
+  ('f9a923d8-f132-4d82-b4c8-86b362003df4', 'Simples Nacional br', 'Impostos', 3378.72, 'expense', false, NULL, NULL, '2025-12-22', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:49:50.613189+00', '2025-12-11 15:20:17.686827+00', NULL, 1, false),
+  ('c00f9a98-d5c1-44ff-8018-f67af1709a5c', 'Imposto Parcelado', 'Impostos', 643.92, 'expense', false, NULL, NULL, '2025-12-22', '2025-12-17', 'paid', NULL, NULL, '2025-12-11 13:53:37.392041+00', '2025-12-17 12:21:57.879983+00', NULL, 3, false),
+  ('02dd0501-b3ad-49fa-ae3b-c5ce2831932a', 'Rosa dos Ventos ', 'Contrato Mensal', 10000.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-10', 'paid', 'Cond. Rosa dos Ventos', NULL, '2025-12-10 19:51:18.213428+00', '2025-12-17 12:24:55.498513+00', NULL, 1, false),
+  ('f4befee1-fe5b-46d7-b1c3-71679479e029', 'Daniel - Salario', 'Salários', 2145.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2025-12-17 13:08:18.101862+00', '2026-01-12 12:59:59.664334+00', NULL, 1, false),
+  ('46d3a2ba-76d6-40f9-a86b-d9a81a53c2f0', 'Pagamento Folguista Mateus Faria — Dezembro/2025', 'Folguistas', 2230.00, 'expense', false, NULL, NULL, '2026-01-03', '2026-01-12', 'paid', NULL, NULL, '2026-01-03 12:13:59.696779+00', '2026-01-12 13:00:04.87005+00', NULL, 1, false),
+  ('02e0a9e1-365d-4a33-b876-4c9db81a66d8', 'Gysele - Salario', 'Salários', 2930.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:01:17.568234+00', '2026-01-12 13:01:21.63402+00', NULL, 1, false),
+  ('490e35f9-0b76-4f92-9c27-4d5c92965207', 'Lucas - Salario', 'Salários', 3880.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:01:59.486593+00', '2026-01-12 13:02:02.129097+00', NULL, 1, false),
+  ('4075e732-5d98-4554-9aef-cc61879ae421', 'Sergio - Salario', 'Salários', 2907.30, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:03:37.866051+00', '2026-01-12 13:03:44.003778+00', NULL, 1, false),
+  ('8043aef5-cfee-410d-a313-5bd46d079daa', 'Gustavo', 'Salários', 2140.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:06:34.839887+00', '2026-01-12 13:06:40.812013+00', NULL, 1, false),
+  ('6e23973b-ce5c-4df1-9229-e9d54c3cc58f', 'Solar da Barra - Hora Extra e Folga', 'Serviço Avulso', 4076.00, 'income', false, NULL, NULL, '2026-01-12', '2026-01-12', 'paid', 'Condominio Solar da Barra', NULL, '2026-01-12 12:52:00.988794+00', '2026-01-12 23:16:00.706979+00', NULL, 0, false),
+  ('b33403d6-6c1d-4b1a-a24a-59b6d04c5686', 'Four Sessean - Contrato Mensal', 'Contrato Mensal', 14650.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', 'Condomio Four Sessean', NULL, '2026-01-12 12:53:15.395328+00', '2026-01-12 23:16:06.558976+00', NULL, 1, false),
+  ('4cbb71d1-ffef-4bdd-9595-000f7c873bf6', 'Cond. Rosas dos Ventos', 'Contrato Mensal', 12580.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-19', 'paid', 'Condominio Rosa dos Ventos', NULL, '2026-01-12 12:57:22.696002+00', '2026-01-19 18:22:12.160649+00', NULL, 1, false),
+  ('d2c133b0-604c-4482-a294-4ed34903052b', 'Cond. Rosa dos Mares', 'Contrato Mensal', 12530.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-19', 'paid', 'Condominio Rosa dos Mares', NULL, '2026-01-12 12:58:49.843206+00', '2026-01-19 18:22:21.8305+00', NULL, 1, false)
+ON CONFLICT DO NOTHING;
+
+-- shift_swaps: sem dados
+
 INSERT INTO public.anotacoes_periodo (id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at)
 SELECT v.id::uuid, v.folguista_id::uuid, v.company_id::uuid, v.periodo_mes::int, v.periodo_ano::int, v.observacao::text, v.status::text, v.financeiro_despesa_id::uuid, v.created_at::timestamptz, v.updated_at::timestamptz
 FROM (VALUES
@@ -418,6 +451,7 @@ FROM (VALUES
 ) AS v(id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at)
 WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.folguista_id::uuid)
 ON CONFLICT DO NOTHING;
+
 
 INSERT INTO public.anotacoes_folguista (id, company_id, folguista_id, data_trabalho, local_id, valor, status, observacao, financeiro_despesa_id, data_pagamento, forma_pagamento, created_at, updated_at, periodo_id)
 SELECT v.id::uuid, v.company_id::uuid, v.folguista_id::uuid, v.data_trabalho::date, v.local_id::uuid, v.valor::numeric, v.status::text, v.observacao::text, v.financeiro_despesa_id::uuid, v.data_pagamento::date, v.forma_pagamento::text, v.created_at::timestamptz, v.updated_at::timestamptz, v.periodo_id::uuid
@@ -470,45 +504,17 @@ FROM (VALUES
 WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.folguista_id::uuid)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.financial_entries (id, description, category, amount, entry_type, is_recurring, recurrence_type, recurrence_day, due_date, paid_date, status, client_name, notes, created_at, updated_at, company_id, notification_days, notification_sent) VALUES
-  ('9643b183-c014-48ec-adc3-13732fdb8b90', 'Condominio Rosa dos Mares', 'Contrato Mensal', 10960.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-10', 'paid', 'Cond Rosa dos Mares', NULL, '2025-12-10 20:25:55.106194+00', '2025-12-10 20:26:15.436654+00', NULL, 1, false),
-  ('d294c500-ece9-4124-bd27-d7d61f8ea298', 'Panetone Funcionarios', 'Outros', 140.94, 'expense', false, NULL, NULL, '2025-12-18', '2025-12-18', 'paid', NULL, 'Compra de 6 panetones para dar de Natal para os funcionarios', '2025-12-18 23:43:22.396005+00', '2025-12-18 23:43:36.119295+00', NULL, 0, false),
-  ('222ff2a9-2daa-418d-af81-6c97f6f99bb7', 'Condominio Varandas das Rosas', 'Contrato Mensal', 10810.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', 'Contrato Varandas ', NULL, '2025-12-11 13:26:40.734686+00', '2025-12-11 13:28:08.965119+00', NULL, 1, false),
-  ('78f2cf28-fad1-45d3-a580-050b5c693a67', 'Condominio Fuor Sesean', 'Contrato Mensal', 15380.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', 'Contrato Prestação de serviço', NULL, '2025-12-11 13:30:52.143101+00', '2025-12-11 13:30:57.01401+00', NULL, 0, false),
-  ('8f74c84d-bdad-4f78-b0c1-7eecf31ef216', 'Sergio Guradião', 'Salários', 3025.59, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:34:39.762994+00', '2025-12-11 13:34:45.434884+00', NULL, 0, false),
-  ('f84bea5e-17e2-40b0-bfc2-be883c5ce7f1', 'Vitor - Salario', 'Salários', 2305.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:05:16.562231+00', '2026-01-12 13:05:21.49054+00', NULL, 1, false),
-  ('9a117789-d5c6-40ac-ac1b-665fc81d6227', 'Vitor Guardião', 'Salários', 2710.59, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-10 20:29:50.136847+00', '2025-12-11 13:35:39.964207+00', NULL, 0, false),
-  ('faffc4fb-8a4f-4d10-badc-e40ebb8b7b56', 'Daniel Guardião', 'Salários', 2651.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-10 20:27:27.427281+00', '2025-12-11 13:36:13.195258+00', NULL, 1, false),
-  ('db194536-0afb-4b89-a05f-f402b4533ccd', 'Lucas Guardião', 'Salários', 3154.40, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:43:28.819637+00', '2025-12-11 13:43:36.771862+00', NULL, 1, false),
-  ('a0d46a7f-0256-4c8f-ab4a-dfc22de0f5d8', 'Mateus Guardião', 'Salários', 1160.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:44:58.969607+00', '2025-12-11 13:45:05.82271+00', NULL, 0, false),
-  ('bba75db9-9841-409c-8283-bf1a5b9c0cd0', 'Material Piscina', 'Material', 2090.00, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:46:54.638502+00', '2025-12-11 13:46:58.318828+00', NULL, 0, false),
-  ('01cf8e59-b4bb-4a67-a8c5-5489e66b99d7', 'Contator', 'Impostos', 761.25, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:52:45.410401+00', '2025-12-11 13:52:53.506318+00', NULL, 0, false),
-  ('2109466d-7c17-42d5-a94a-71af254b20d0', 'Cond. Varandas ', 'Contrato Mensal', 11060.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', 'Condominio Varandas das Rosas', NULL, '2026-01-12 12:56:10.041081+00', '2026-01-12 12:56:19.458051+00', NULL, 1, false),
-  ('81809627-a3d1-45d4-9bdd-25be521178da', 'Gysele Guardião', 'Salários', 6571.66, 'expense', false, NULL, NULL, '2025-12-10', '2025-12-11', 'paid', NULL, 'Nesse Pagamento costa o valor das Férias ', '2025-12-11 13:39:27.862755+00', '2025-12-11 13:56:04.403163+00', NULL, 0, false),
-  ('f9a923d8-f132-4d82-b4c8-86b362003df4', 'Simples Nacional br', 'Impostos', 3378.72, 'expense', false, NULL, NULL, '2025-12-22', '2025-12-11', 'paid', NULL, NULL, '2025-12-11 13:49:50.613189+00', '2025-12-11 15:20:17.686827+00', NULL, 1, false),
-  ('c00f9a98-d5c1-44ff-8018-f67af1709a5c', 'Imposto Parcelado', 'Impostos', 643.92, 'expense', false, NULL, NULL, '2025-12-22', '2025-12-17', 'paid', NULL, NULL, '2025-12-11 13:53:37.392041+00', '2025-12-17 12:21:57.879983+00', NULL, 3, false),
-  ('02dd0501-b3ad-49fa-ae3b-c5ce2831932a', 'Rosa dos Ventos ', 'Contrato Mensal', 10000.00, 'income', false, NULL, NULL, '2025-12-10', '2025-12-10', 'paid', 'Cond. Rosa dos Ventos', NULL, '2025-12-10 19:51:18.213428+00', '2025-12-17 12:24:55.498513+00', NULL, 1, false),
-  ('f4befee1-fe5b-46d7-b1c3-71679479e029', 'Daniel - Salario', 'Salários', 2145.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2025-12-17 13:08:18.101862+00', '2026-01-12 12:59:59.664334+00', NULL, 1, false),
-  ('46d3a2ba-76d6-40f9-a86b-d9a81a53c2f0', 'Pagamento Folguista Mateus Faria — Dezembro/2025', 'Folguistas', 2230.00, 'expense', false, NULL, NULL, '2026-01-03', '2026-01-12', 'paid', NULL, NULL, '2026-01-03 12:13:59.696779+00', '2026-01-12 13:00:04.87005+00', NULL, 1, false),
-  ('02e0a9e1-365d-4a33-b876-4c9db81a66d8', 'Gysele - Salario', 'Salários', 2930.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:01:17.568234+00', '2026-01-12 13:01:21.63402+00', NULL, 1, false),
-  ('490e35f9-0b76-4f92-9c27-4d5c92965207', 'Lucas - Salario', 'Salários', 3880.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:01:59.486593+00', '2026-01-12 13:02:02.129097+00', NULL, 1, false),
-  ('4075e732-5d98-4554-9aef-cc61879ae421', 'Sergio - Salario', 'Salários', 2907.30, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:03:37.866051+00', '2026-01-12 13:03:44.003778+00', NULL, 1, false),
-  ('8043aef5-cfee-410d-a313-5bd46d079daa', 'Gustavo', 'Salários', 2140.00, 'expense', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', NULL, NULL, '2026-01-12 13:06:34.839887+00', '2026-01-12 13:06:40.812013+00', NULL, 1, false),
-  ('6e23973b-ce5c-4df1-9229-e9d54c3cc58f', 'Solar da Barra - Hora Extra e Folga', 'Serviço Avulso', 4076.00, 'income', false, NULL, NULL, '2026-01-12', '2026-01-12', 'paid', 'Condominio Solar da Barra', NULL, '2026-01-12 12:52:00.988794+00', '2026-01-12 23:16:00.706979+00', NULL, 0, false),
-  ('b33403d6-6c1d-4b1a-a24a-59b6d04c5686', 'Four Sessean - Contrato Mensal', 'Contrato Mensal', 14650.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-12', 'paid', 'Condomio Four Sessean', NULL, '2026-01-12 12:53:15.395328+00', '2026-01-12 23:16:06.558976+00', NULL, 1, false),
-  ('4cbb71d1-ffef-4bdd-9595-000f7c873bf6', 'Cond. Rosas dos Ventos', 'Contrato Mensal', 12580.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-19', 'paid', 'Condominio Rosa dos Ventos', NULL, '2026-01-12 12:57:22.696002+00', '2026-01-19 18:22:12.160649+00', NULL, 1, false),
-  ('d2c133b0-604c-4482-a294-4ed34903052b', 'Cond. Rosa dos Mares', 'Contrato Mensal', 12530.00, 'income', false, NULL, NULL, '2026-01-10', '2026-01-19', 'paid', 'Condominio Rosa dos Mares', NULL, '2026-01-12 12:58:49.843206+00', '2026-01-19 18:22:21.8305+00', NULL, 1, false)
-ON CONFLICT DO NOTHING;
 
--- shift_swaps: sem dados
 
 INSERT INTO public.notification_recipients (id, name, whatsapp, receives_entry, receives_lunch_out, receives_lunch_in, receives_exit, receives_alerts, scope_type, scope_id, created_at, updated_at, is_location_admin, company_id) VALUES
   ('5d1166f2-fb6c-4996-a85d-81577ee9f3ab', 'Luis Carlos', 5521980120036, true, false, false, true, true, 'all', NULL, '2025-12-11 01:01:00.736477+00', '2025-12-18 16:00:57.948699+00', false, NULL)
 ON CONFLICT DO NOTHING;
 
+
 INSERT INTO public.zapi_config (id, instance_id, token, client_token, is_active, created_at, updated_at) VALUES
   ('517f899f-283c-4c8b-a71c-4be0357d411b', '3EB77C4A8616B047C6CBEE5C3D37D036', 'E00FB510584FB7B299D22E85', 'Fe6cbe98cbbe8405e820c8ea88fb9c13cS', true, '2026-01-31 00:54:46.148391+00', '2026-04-15 16:31:56.94855+00')
 ON CONFLICT DO NOTHING;
+
 
 -- Master user (Luis Verbo)
 INSERT INTO public.master_users (user_id)
