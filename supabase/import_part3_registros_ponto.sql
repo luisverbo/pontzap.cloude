@@ -3,7 +3,7 @@
 -- ================================================
 
 INSERT INTO public.clock_records (id, employee_id, location_id, type, timestamp, method, latitude, longitude, created_at, is_manual, manual_registered_by, manual_observation)
-SELECT v.id::uuid, v.employee_id::uuid, v.location_id::uuid, v.type::clock_type, v.timestamp::timestamptz, v.method::clock_method, v.latitude::float8, v.longitude::float8, v.created_at::timestamptz, v.is_manual::boolean, v.manual_registered_by::uuid, v.manual_observation::text
+SELECT v.id::uuid, v.employee_id::uuid, v.location_id::uuid, v.type::clock_type, v.timestamp::timestamptz, v.method::clock_method, v.latitude::float8, v.longitude::float8, v.created_at::timestamptz, v.is_manual::boolean, CASE WHEN v.manual_registered_by IS NULL THEN NULL WHEN EXISTS (SELECT 1 FROM auth.users WHERE id = v.manual_registered_by::uuid) THEN v.manual_registered_by::uuid ELSE NULL END, v.manual_observation::text
 FROM (VALUES
   ('0758cc38-73f9-4833-9d18-115cb24f713b', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 'exit', '2025-12-18 17:00:13.659+00', 'gps', -23.0047896145296, -43.3491945133635, '2025-12-18 17:00:14.174429+00', false, NULL, NULL),
   ('bd3de95b-0780-404a-a1a1-56f198cbf96c', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', 'entry', '2025-12-19 10:28:11.14+00', 'gps', -23.0049788060455, -43.3487394761053, '2025-12-19 10:28:11.610174+00', false, NULL, NULL),
