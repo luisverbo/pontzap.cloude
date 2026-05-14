@@ -1,0 +1,31 @@
+{
+  "name": "PONTZAP - Controle de Ponto",
+  "short_name": "PONTZAP",
+  "description": "Sistema de controle de ponto com validação por QR Code e GPS",
+  "start_url": "/clock",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#14b8a6",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

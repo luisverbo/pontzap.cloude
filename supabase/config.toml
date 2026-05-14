@@ -1,0 +1,25 @@
+project_id = "SEU_PROJECT_ID_AQUI"
+
+[functions.invite-employee]
+verify_jwt = true
+
+[functions.send-whatsapp]
+verify_jwt = true
+
+[functions.send-swap-notification]
+verify_jwt = true
+
+[functions.check-lateness]
+verify_jwt = false
+
+[functions.get-lateness-alert]
+verify_jwt = false
+
+[functions.respond-lateness]
+verify_jwt = false
+
+[functions.send-company-welcome]
+verify_jwt = false
+
+[functions.create-company-admin]
+verify_jwt = false

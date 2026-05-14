@@ -1,0 +1,302 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Modern Light Theme - Clean & Professional */
+    --background: 220 20% 97%; /* #F8F9FB ice white */
+    --foreground: 222 47% 14%; /* #1E293B dark slate */
+
+    --card: 0 0% 100%; /* Pure white */
+    --card-foreground: 222 47% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 14%;
+
+    --primary: 199 89% 40%; /* Modern teal/cyan */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 199 89% 50%;
+
+    --secondary: 220 14% 96%; /* Soft gray */
+    --secondary-foreground: 222 47% 14%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 16 85% 57%; /* Warm coral */
+    --accent-foreground: 0 0% 100%;
+
+    --success: 152 70% 40%; /* Fresh green */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%; /* Amber */
+    --warning-foreground: 222 47% 14%;
+
+    --destructive: 0 84% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 199 89% 40%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - Light Theme */
+    --sidebar-background: 222 47% 14%; /* Dark sidebar for contrast */
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 199 89% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 20%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 199 89% 50%;
+    --sidebar-muted: 215 20% 60%;
+
+    /* Pastel Accents */
+    --pastel-green: 152 50% 92%;
+    --pastel-yellow: 48 80% 92%;
+    --pastel-blue: 199 60% 92%;
+    --pastel-red: 0 60% 94%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(199, 89%, 40%), hsl(199, 89%, 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(16, 85%, 57%), hsl(28, 90%, 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(199, 89%, 40%) 0%, hsl(210, 80%, 45%) 50%, hsl(199, 89%, 50%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(220, 20%, 99%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(220, 20%, 97%) 0%, hsl(220, 14%, 95%) 100%);
+
+    /* Modern Shadows - Soft & Elegant */
+    --shadow-sm: 0 1px 2px 0 hsl(222, 47%, 14%, 0.03), 0 1px 3px 0 hsl(222, 47%, 14%, 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(222, 47%, 14%, 0.05), 0 2px 4px -2px hsl(222, 47%, 14%, 0.05);
+    --shadow-lg: 0 10px 25px -5px hsl(222, 47%, 14%, 0.08), 0 8px 10px -6px hsl(222, 47%, 14%, 0.04);
+    --shadow-xl: 0 25px 50px -12px hsl(222, 47%, 14%, 0.15);
+    --shadow-glow: 0 0 25px hsl(199, 89%, 50%, 0.25);
+    --shadow-accent-glow: 0 0 25px hsl(16, 85%, 57%, 0.3);
+    --shadow-card: 0 1px 3px hsl(222, 47%, 14%, 0.04), 0 4px 12px hsl(222, 47%, 14%, 0.06);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Modern Dark Theme - Blue Graphite */
+    --background: 222 47% 5%; /* #0F172A deep blue */
+    --foreground: 214 32% 91%; /* #E2E8F0 soft white */
+
+    --card: 222 47% 11%; /* #1E293B slate */
+    --card-foreground: 214 32% 91%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 214 32% 91%;
+
+    --primary: 199 89% 48%; /* Brighter teal for dark mode */
+    --primary-foreground: 222 47% 5%;
+    --primary-glow: 199 89% 55%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 214 32% 91%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 60%;
+
+    --accent: 16 85% 57%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 152 70% 45%;
+    --success-foreground: 222 47% 5%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 5%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 214 32% 91%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 199 89% 48%;
+
+    /* Sidebar - Dark Theme */
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 222 47% 5%;
+    --sidebar-accent: 217 33% 15%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 199 89% 48%;
+    --sidebar-muted: 215 20% 50%;
+
+    /* Pastel Accents - Darker versions */
+    --pastel-green: 152 40% 18%;
+    --pastel-yellow: 48 50% 15%;
+    --pastel-blue: 199 40% 18%;
+    --pastel-red: 0 40% 18%;
+
+    /* Gradients - Dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(199, 89%, 45%), hsl(199, 89%, 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(199, 89%, 40%) 0%, hsl(210, 80%, 48%) 50%, hsl(199, 89%, 52%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(222, 47%, 12%) 0%, hsl(222, 47%, 10%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(222, 47%, 5%) 0%, hsl(222, 47%, 4%) 100%);
+
+    /* Shadows - Dark mode with subtle glow */
+    --shadow-sm: 0 1px 2px 0 hsl(0, 0%, 0%, 0.2);
+    --shadow-md: 0 4px 6px -1px hsl(0, 0%, 0%, 0.3), 0 2px 4px -2px hsl(0, 0%, 0%, 0.2);
+    --shadow-lg: 0 10px 25px -5px hsl(0, 0%, 0%, 0.4), 0 8px 10px -6px hsl(0, 0%, 0%, 0.2);
+    --shadow-xl: 0 25px 50px -12px hsl(0, 0%, 0%, 0.5);
+    --shadow-glow: 0 0 30px hsl(199, 89%, 48%, 0.35);
+    --shadow-card: 0 0 0 1px hsl(217, 33%, 18%), 0 4px 20px hsl(0, 0%, 0%, 0.25);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Glass Card Effect - Better for dark mode */
+  .glass-card {
+    @apply bg-card/90 backdrop-blur-xl border border-border/50;
+    box-shadow: var(--shadow-card);
+  }
+
+  .dark .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border-border/30;
+    box-shadow: 0 0 0 1px hsl(217, 33%, 20%, 0.5), 0 8px 32px hsl(0, 0%, 0%, 0.3);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  /* Glow Effects */
+  .btn-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .btn-glow-accent {
+    box-shadow: var(--shadow-accent-glow);
+  }
+
+  /* Modern Card Styles */
+  .card-modern {
+    @apply bg-card rounded-xl border border-border/50 transition-all duration-200;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-modern:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Pastel Status Cards */
+  .status-success {
+    @apply bg-[hsl(var(--pastel-green))] border-success/30;
+  }
+
+  .status-warning {
+    @apply bg-[hsl(var(--pastel-yellow))] border-warning/30;
+  }
+
+  .status-info {
+    @apply bg-[hsl(var(--pastel-blue))] border-primary/30;
+  }
+
+  .status-error {
+    @apply bg-[hsl(var(--pastel-red))] border-destructive/30;
+  }
+
+  /* Sidebar Styles */
+  .sidebar-modern {
+    @apply bg-sidebar border-r border-sidebar-border;
+    box-shadow: 4px 0 24px hsl(0, 0%, 0%, 0.05);
+  }
+
+  .dark .sidebar-modern {
+    box-shadow: 4px 0 32px hsl(0, 0%, 0%, 0.25);
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out forwards;
+  }
+
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+}
