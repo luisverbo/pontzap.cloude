@@ -1,5 +1,7 @@
 # PONTZAP — Controle de Ponto
 
+**Deploy:** https://pontzap-cloude.vercel.app
+
 Sistema de controle de ponto com suporte a QR Code, GPS, offline-first e PWA.
 
 ## Stack
@@ -167,8 +169,8 @@ Itens que **não são migrados automaticamente** pelas migrations e precisam ser
 
 | Item | Onde configurar | O que fazer |
 |---|---|---|
-| **Auth redirect URLs** | Supabase → Auth → URL Configuration | Adicionar a URL do Vercel em "Redirect URLs" |
-| **Webhook Kiwify** | Painel da Kiwify | Atualizar a URL do webhook para `https://SEU_PROJECT_ID.supabase.co/functions/v1/payment-webhook` |
+| **Auth redirect URLs** | Supabase → Auth → URL Configuration | Site URL: `https://pontzap-cloude.vercel.app` / Redirect URLs: `https://pontzap-cloude.vercel.app/**` |
+| **Webhook Kiwify** | Painel da Kiwify | Atualizar a URL do webhook para `https://hzedbdiznmlnlxnmtoho.supabase.co/functions/v1/payment-webhook` |
 | **Cron job alertas** | SQL Editor do Supabase | Executar o SQL da seção 7 acima |
 | **Secrets das funções** | CLI ou Supabase Dashboard | Ver seção 5 acima |
 
