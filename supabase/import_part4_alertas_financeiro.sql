@@ -2,7 +2,9 @@
 -- PARTE 4: Alertas, Anotações, Financeiro, Notificações
 -- ================================================
 
-INSERT INTO public.lateness_alerts (id, employee_id, location_id, schedule_date, scheduled_time, alert_sent_at, response_type, response_at, response_notified, created_at, observation) VALUES
+INSERT INTO public.lateness_alerts (id, employee_id, location_id, schedule_date, scheduled_time, alert_sent_at, response_type, response_at, response_notified, created_at, observation)
+SELECT v.id::uuid, v.employee_id::uuid, v.location_id::uuid, v.schedule_date::date, v.scheduled_time::time, v.alert_sent_at::timestamptz, v.response_type::text, v.response_at::timestamptz, v.response_notified::boolean, v.created_at::timestamptz, v.observation::text
+FROM (VALUES
   ('37da076f-cbbc-4be9-9a59-a8c24a6e3c52', 'f145d73a-0289-4740-ac34-41ccfb1e03eb', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2026-01-17', '08:00:00', '2026-01-17 10:45:01.373272+00', NULL, NULL, false, '2026-01-17 10:45:01.373272+00', NULL),
   ('e830c6a4-00bb-40b8-86f1-0666d03c8d86', '1d1fb983-f86c-4832-8020-60f07e16e211', 'af38b26f-0811-4153-a1f6-8b182a1b04be', '2026-01-18', '08:00:00', '2026-01-18 10:45:02.975117+00', NULL, NULL, false, '2026-01-18 10:45:02.975117+00', NULL),
   ('355e2625-e878-4b36-8edb-bd47e0790265', 'f145d73a-0289-4740-ac34-41ccfb1e03eb', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', '2026-01-19', '08:00:00', '2026-01-19 10:45:02.307864+00', NULL, NULL, false, '2026-01-19 10:45:02.307864+00', NULL),
@@ -403,15 +405,23 @@ INSERT INTO public.lateness_alerts (id, employee_id, location_id, schedule_date,
   ('19eab913-5ff6-48ae-b8ad-ea4ea49cf57f', '61ca4e6a-a096-4642-8e56-8a4be4ce429c', '06e4537d-cc84-4239-a30e-991a6db979e7', '2026-05-14', '08:00:00', '2026-05-14 10:25:01.424283+00', NULL, NULL, false, '2026-05-14 10:25:01.424283+00', NULL),
   ('00900896-565e-46b2-a1fe-343d533c00f7', '7d1e4299-bc4d-467a-b6a9-e5d827becd11', '5a152705-842b-4a16-b7ec-782c36d10cf9', '2026-05-14', '09:00:00', '2026-05-14 11:30:01.495251+00', NULL, NULL, false, '2026-05-14 11:30:01.495251+00', NULL),
   ('742d58a3-349c-4ddb-accb-8c97b27fbb9d', '1d1fb983-f86c-4832-8020-60f07e16e211', 'af38b26f-0811-4153-a1f6-8b182a1b04be', '2026-05-14', '09:00:00', '2026-05-14 11:45:01.485933+00', NULL, NULL, false, '2026-05-14 11:45:01.485933+00', NULL)
+) AS v(id, employee_id, location_id, schedule_date, scheduled_time, alert_sent_at, response_type, response_at, response_notified, created_at, observation)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.employee_id::uuid)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.anotacoes_periodo (id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at) VALUES
+INSERT INTO public.anotacoes_periodo (id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at)
+SELECT v.id::uuid, v.folguista_id::uuid, v.company_id::uuid, v.periodo_mes::int, v.periodo_ano::int, v.observacao::text, v.status::text, v.financeiro_despesa_id::uuid, v.created_at::timestamptz, v.updated_at::timestamptz
+FROM (VALUES
   ('4dd43fbb-f206-4fa3-bfe5-66d6a051ffa8', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', NULL, 12, 2025, NULL, 'aberto', NULL, '2025-12-17 15:50:41.212354+00', '2025-12-17 15:50:41.212354+00'),
   ('264ce7e3-91ee-4a7e-8432-39875e3ad045', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', NULL, 1, 2026, NULL, 'aberto', NULL, '2026-01-03 12:11:40.807091+00', '2026-01-03 12:11:40.807091+00'),
   ('813bebc8-be27-49f7-bdbd-a6b33d1abe56', 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', NULL, 2, 2026, NULL, 'aberto', NULL, '2026-02-19 21:24:52.763671+00', '2026-02-19 21:24:52.763671+00')
+) AS v(id, folguista_id, company_id, periodo_mes, periodo_ano, observacao, status, financeiro_despesa_id, created_at, updated_at)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.folguista_id::uuid)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.anotacoes_folguista (id, company_id, folguista_id, data_trabalho, local_id, valor, status, observacao, financeiro_despesa_id, data_pagamento, forma_pagamento, created_at, updated_at, periodo_id) VALUES
+INSERT INTO public.anotacoes_folguista (id, company_id, folguista_id, data_trabalho, local_id, valor, status, observacao, financeiro_despesa_id, data_pagamento, forma_pagamento, created_at, updated_at, periodo_id)
+SELECT v.id::uuid, v.company_id::uuid, v.folguista_id::uuid, v.data_trabalho::date, v.local_id::uuid, v.valor::numeric, v.status::text, v.observacao::text, v.financeiro_despesa_id::uuid, v.data_pagamento::date, v.forma_pagamento::text, v.created_at::timestamptz, v.updated_at::timestamptz, v.periodo_id::uuid
+FROM (VALUES
   ('0a0d7433-da74-4f19-89e8-1bfe031deda1', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-01-12', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'pago', NULL, NULL, '2026-02-10', 'pix', '2026-01-14 02:12:22.254704+00', '2026-02-10 18:51:58.99248+00', '264ce7e3-91ee-4a7e-8432-39875e3ad045'),
   ('17c980b3-ed22-4efe-9bed-f4f16b269922', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-01-03', 'af38b26f-0811-4153-a1f6-8b182a1b04be', 140.00, 'pago', NULL, NULL, '2026-02-10', 'pix', '2026-01-03 12:12:35.839028+00', '2026-02-10 18:51:58.99248+00', '264ce7e3-91ee-4a7e-8432-39875e3ad045'),
   ('19ed4edb-177f-45f8-84b4-72564f3cc8f1', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-01-04', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'pago', NULL, NULL, '2026-02-10', 'pix', '2026-01-08 23:06:51.245201+00', '2026-02-10 18:51:58.99248+00', '264ce7e3-91ee-4a7e-8432-39875e3ad045'),
@@ -456,6 +466,8 @@ INSERT INTO public.anotacoes_folguista (id, company_id, folguista_id, data_traba
   ('54ce1df9-11cb-42cd-baa9-ea6b75221da7', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-02-13', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'a_pagar', NULL, NULL, NULL, NULL, '2026-02-19 21:28:35.932824+00', '2026-02-19 21:28:35.932824+00', '813bebc8-be27-49f7-bdbd-a6b33d1abe56'),
   ('4d7f475f-fb67-40c6-976e-cab25d7be61b', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-02-15', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'a_pagar', NULL, NULL, NULL, NULL, '2026-02-19 21:29:30.509096+00', '2026-02-19 21:29:30.509096+00', '813bebc8-be27-49f7-bdbd-a6b33d1abe56'),
   ('55ce9b6c-28ad-4be2-af33-c50c8bdb3bc5', NULL, 'a4291ae4-4bc3-44a6-9a20-73bb2ad52050', '2026-02-17', '7a56d99e-bbb9-4943-b78b-e45004e02e2f', 140.00, 'a_pagar', NULL, NULL, NULL, NULL, '2026-02-19 21:29:52.503919+00', '2026-02-19 21:29:52.503919+00', '813bebc8-be27-49f7-bdbd-a6b33d1abe56')
+) AS v(id, company_id, folguista_id, data_trabalho, local_id, valor, status, observacao, financeiro_despesa_id, data_pagamento, forma_pagamento, created_at, updated_at, periodo_id)
+WHERE EXISTS (SELECT 1 FROM public.employees WHERE id = v.folguista_id::uuid)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.financial_entries (id, description, category, amount, entry_type, is_recurring, recurrence_type, recurrence_day, due_date, paid_date, status, client_name, notes, created_at, updated_at, company_id, notification_days, notification_sent) VALUES
@@ -499,4 +511,7 @@ INSERT INTO public.zapi_config (id, instance_id, token, client_token, is_active,
 ON CONFLICT DO NOTHING;
 
 -- Master user (Luis Verbo)
-INSERT INTO public.master_users (user_id) VALUES ('94df506b-a515-40f8-8e9a-7971db2ea624') ON CONFLICT DO NOTHING;
+INSERT INTO public.master_users (user_id)
+SELECT '94df506b-a515-40f8-8e9a-7971db2ea624'::uuid
+WHERE EXISTS (SELECT 1 FROM auth.users WHERE id = '94df506b-a515-40f8-8e9a-7971db2ea624'::uuid)
+ON CONFLICT DO NOTHING;
