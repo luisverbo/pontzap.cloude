@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ResetClockRecordsDialog } from '@/components/ResetClockRecordsDialog';
-import logoPontzap from '@/assets/logo-pontzap-branca.png';
+import logoPontzap from '@/assets/logo-pontzap.png';
+import logoPontzapBranca from '@/assets/logo-pontzap-branca.png';
 import {
   LayoutDashboard,
   Users,
@@ -145,11 +146,8 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center px-4 py-4 border-b border-sidebar-border/40">
-            <img
-              src={logoPontzap}
-              alt="PONTZAP"
-              className="h-10 w-auto object-contain"
-            />
+            <img src={logoPontzap} alt="PONTZAP" className="h-10 w-auto object-contain dark:hidden" />
+            <img src={logoPontzapBranca} alt="PONTZAP" className="h-10 w-auto object-contain hidden dark:block" />
           </div>
 
           {/* Navigation */}
