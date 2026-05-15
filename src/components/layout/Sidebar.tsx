@@ -146,8 +146,8 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center px-4 py-5 border-b border-sidebar-border/40">
-            <img src={logoPontzap} alt="PONTZAP" className="h-16 w-auto object-contain dark:hidden" />
-            <img src={logoPontzapBranca} alt="PONTZAP" className="h-16 w-auto object-contain hidden dark:block" />
+            <img src={logoPontzap} alt="PONTZAP" className="h-20 w-auto object-contain dark:hidden" />
+            <img src={logoPontzapBranca} alt="PONTZAP" className="h-20 w-auto object-contain hidden dark:block" />
           </div>
 
           {/* Navigation */}
