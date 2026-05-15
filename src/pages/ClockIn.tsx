@@ -84,7 +84,7 @@ export default function ClockIn() {
   const [loading, setLoading] = useState<ClockType | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [employeeData, setEmployeeData] = useState<{ id: string; locationId: string | null; companyId: string | null } | null>(null);
+  const [employeeData, setEmployeeData] = useState<{ id: string; locationId: string | null; companyId: string | null; type: string; valorDiaria: number | null } | null>(null);
   const [loadingEmployee, setLoadingEmployee] = useState(true);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [pendingClockType, setPendingClockType] = useState<ClockType | null>(null);
@@ -253,6 +253,8 @@ export default function ClockIn() {
           .select(`
             id,
             company_id,
+            type,
+            valor_diaria,
             employee_locations(
               location_id,
               is_primary
@@ -266,11 +268,13 @@ export default function ClockIn() {
         if (employee) {
           const primaryLocation = employee.employee_locations?.find((l: any) => l.is_primary);
           const firstLocation = employee.employee_locations?.[0];
-          
+
           setEmployeeData({
             id: employee.id,
             locationId: primaryLocation?.location_id || firstLocation?.location_id || null,
             companyId: employee.company_id,
+            type: (employee as any).type || 'fixed',
+            valorDiaria: (employee as any).valor_diaria ?? null,
           });
         }
       } catch (error) {
@@ -282,6 +286,41 @@ export default function ClockIn() {
 
     fetchEmployeeData();
   }, [user]);
+
+  const autoCreateAnotacao = async (employeeId: string, valor: number, locationId: string | null) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+
+      const { data: existing } = await supabase
+        .from('anotacoes_folguista')
+        .select('id')
+        .eq('folguista_id', employeeId)
+        .eq('data_trabalho', today)
+        .maybeSingle();
+
+      if (existing) return;
+
+      const { data: periodo } = await supabase
+        .from('anotacoes_periodo')
+        .select('id')
+        .eq('folguista_id', employeeId)
+        .eq('periodo_mes', now.getMonth() + 1)
+        .eq('periodo_ano', now.getFullYear())
+        .maybeSingle();
+
+      await supabase.from('anotacoes_folguista').insert({
+        folguista_id: employeeId,
+        data_trabalho: today,
+        valor,
+        status: 'a_pagar',
+        periodo_id: periodo?.id ?? null,
+        local_id: locationId ?? null,
+      });
+    } catch (err) {
+      console.error('Erro ao criar registro de folguista:', err);
+    }
+  };
 
   const sendWhatsAppNotification = async (clockRecordId: string, type: ClockType, method: 'qr' | 'gps') => {
     try {
@@ -308,15 +347,17 @@ export default function ClockIn() {
       return;
     }
 
-    if (!employeeData?.locationId) {
+    const isSubstitute = employeeData?.type === 'substitute';
+    if (!isSubstitute && !employeeData?.locationId) {
       toast.error('Você não está associado a nenhum local de trabalho.');
       return;
     }
 
     setLoading(type);
-    
-    const result = await clockIn(type, employeeData.locationId, 'gps', location.lat, location.lng);
-    
+
+    const locationId = employeeData?.locationId || null;
+    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng);
+
     if (result.success && result.recordId) {
       if (result.offline) {
         updatePendingCount();
@@ -325,7 +366,7 @@ export default function ClockIn() {
       }
       await refetch();
     }
-    
+
     setLoading(null);
   };
 
@@ -336,24 +377,29 @@ export default function ClockIn() {
       return;
     }
 
-    if (!employeeData?.locationId) {
+    const isSubstitute = employeeData?.type === 'substitute';
+    if (!isSubstitute && !employeeData?.locationId) {
       toast.error('Você não está associado a nenhum local de trabalho.');
       return;
     }
 
     setLoading(type);
-    
-    const result = await clockIn(type, employeeData.locationId, 'gps', location.lat, location.lng);
-    
+
+    const locationId = employeeData?.locationId || null;
+    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng);
+
     if (result.success && result.recordId) {
       if (result.offline) {
         updatePendingCount();
       } else {
         sendWhatsAppNotification(result.recordId, type, 'gps');
       }
+      if (type === 'entry' && isSubstitute && employeeData?.valorDiaria) {
+        await autoCreateAnotacao(employeeData.id, employeeData.valorDiaria, locationId);
+      }
       await refetch();
     }
-    
+
     setLoading(null);
     setShowQRScanner(false);
     setPendingClockType(null);
@@ -366,12 +412,15 @@ export default function ClockIn() {
     }
 
     const result = await clockIn(type, locationId, 'qr');
-    
+
     if (result.success && result.recordId) {
       sendWhatsAppNotification(result.recordId, type, 'qr');
+      if (type === 'entry' && employeeData.type === 'substitute' && employeeData.valorDiaria) {
+        await autoCreateAnotacao(employeeData.id, employeeData.valorDiaria, locationId);
+      }
       await refetch();
     }
-    
+
     return result;
   };
 
@@ -543,7 +592,7 @@ export default function ClockIn() {
             <CardDescription className="text-xs sm:text-sm">Use o QR Code do local de trabalho</CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-            {!employeeData?.locationId && (
+            {!employeeData?.locationId && employeeData?.type !== 'substitute' && (
               <div className="mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-warning/10 text-warning text-xs sm:text-sm text-center">
                 Você não está associado a nenhum local de trabalho. Contate o administrador.
               </div>
@@ -565,7 +614,7 @@ export default function ClockIn() {
                           : 'bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 active:scale-95 text-white shadow-orange-500/30 hover:shadow-orange-500/50 hover:shadow-xl'
                     }`}
                     onClick={() => handleEntryExitClick(btn.type)}
-                    disabled={loading !== null || alreadyClocked || !employeeData?.locationId}
+                    disabled={loading !== null || alreadyClocked || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
                   >
                     {loading === btn.type ? (
                       <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin" />
@@ -605,7 +654,7 @@ export default function ClockIn() {
                     size="xl"
                     className={`${btn.color} text-white flex-col h-20 sm:h-24 gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl touch-manipulation`}
                     onClick={() => handleLunchClockIn(btn.type)}
-                    disabled={loading !== null || alreadyClocked || !location || !employeeData?.locationId}
+                    disabled={loading !== null || alreadyClocked || !location || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
                   >
                     {loading === btn.type ? (
                       <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />

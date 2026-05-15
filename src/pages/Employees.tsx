@@ -60,6 +60,7 @@ export default function Employees() {
   const [editForm, setEditForm] = useState({
     type: 'fixed' as 'fixed' | 'substitute',
     is_active: true,
+    valor_diaria: null as number | null,
   });
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -92,6 +93,7 @@ export default function Employees() {
     setEditForm({
       type: employee.type,
       is_active: employee.is_active,
+      valor_diaria: (employee as any).valor_diaria ?? null,
     });
     setEditDialogOpen(true);
   };
@@ -459,6 +461,24 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
               </div>
+              {editForm.type === 'substitute' && (
+                <div className="space-y-2">
+                  <Label>Valor por Dia (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 150.00"
+                    value={editForm.valor_diaria ?? ''}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, valor_diaria: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Valor usado para gerar o registro de pagamento automaticamente ao bater ponto de entrada.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_active"

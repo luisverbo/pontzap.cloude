@@ -121,8 +121,8 @@ export default function PunctualSchedules() {
     setExpandedMonths(new Set([currentKey]));
   }, []);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       // Fetch employees (only substitute type)
       const { data: employeesData, error: employeesError } = await supabase
@@ -300,7 +300,7 @@ export default function PunctualSchedules() {
       );
       setIsDialogOpen(false);
       resetForm();
-      fetchData();
+      fetchData(true);
     } catch (error: any) {
       console.error('Error creating schedule:', error);
       if (error.code === '23505') {
@@ -337,7 +337,7 @@ export default function PunctualSchedules() {
       toast.success('Escala atualizada com sucesso!');
       setIsEditDialogOpen(false);
       setEditingSchedule(null);
-      fetchData();
+      fetchData(true);
     } catch (error: any) {
       console.error('Error updating schedule:', error);
       if (error.code === '23505') {
@@ -360,7 +360,7 @@ export default function PunctualSchedules() {
       if (error) throw error;
 
       toast.success('Escala removida com sucesso!');
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Error deleting schedule:', error);
       toast.error('Erro ao remover escala');

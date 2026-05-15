@@ -101,8 +101,8 @@ export default function FixedSchedules() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       // Fetch employees (only fixed type)
       const { data: employeesData, error: employeesError } = await supabase
@@ -286,7 +286,7 @@ export default function FixedSchedules() {
       toast.success('Escala salva com sucesso!');
       setIsDialogOpen(false);
       setCycleStartDate('');
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Error saving schedule:', error);
       toast.error('Erro ao salvar escala');
