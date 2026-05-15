@@ -45,11 +45,11 @@
     --radius: 0.75rem;
 
     /* Sidebar - Light Theme */
-    --sidebar-background: 220 20% 96%;
+    --sidebar-background: 220 22% 93%;
     --sidebar-foreground: 222 47% 18%;
     --sidebar-primary: 142 63% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 91%;
+    --sidebar-accent: 220 22% 88%;
     --sidebar-accent-foreground: 222 47% 14%;
     --sidebar-border: 220 13% 90%;
     --sidebar-ring: 142 63% 40%;
@@ -221,10 +221,12 @@
   /* Sidebar Styles */
   .sidebar-modern {
     @apply bg-sidebar border-r border-sidebar-border;
-    box-shadow: 2px 0 12px hsl(220, 13%, 80%, 0.4);
+    border-top: 3px solid hsl(142, 63%, 40%);
+    box-shadow: 3px 0 16px hsl(220, 20%, 70%, 0.35);
   }
 
   .dark .sidebar-modern {
+    border-top: 3px solid hsl(142, 63%, 50%);
     box-shadow: 4px 0 32px hsl(0, 0%, 0%, 0.3);
   }
 }
