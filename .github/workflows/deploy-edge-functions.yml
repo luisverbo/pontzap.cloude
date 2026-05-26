@@ -1,0 +1,32 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches:
+      - claude/migrate-vercel-supabase-Mqic6
+      - main
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch: # permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy send-whatsapp --project-ref hzedbdiznmlnlxnmtoho
+          supabase functions deploy check-lateness --project-ref hzedbdiznmlnlxnmtoho
+          supabase functions deploy send-swap-notification --project-ref hzedbdiznmlnlxnmtoho
+          supabase functions deploy respond-lateness --project-ref hzedbdiznmlnlxnmtoho
