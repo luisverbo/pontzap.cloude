@@ -24,45 +24,36 @@ const formatPhoneNumber = (phone: string): string => {
   return digits;
 };
 
-const sendZAPIMessage = async (phone: string, message: string): Promise<boolean> => {
-  const instanceId = Deno.env.get("ZAPI_INSTANCE_ID");
-  const token = Deno.env.get("ZAPI_TOKEN");
-  const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
+const sendEvolutionMessage = async (phone: string, message: string): Promise<boolean> => {
+  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
+  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
+  const instance = Deno.env.get("EVOLUTION_INSTANCE");
 
-  if (!instanceId || !token) {
-    console.error("Z-API credentials not configured");
+  if (!baseUrl || !apiKey || !instance) {
+    console.error("Evolution API credentials not configured");
     return false;
   }
 
   const formattedPhone = formatPhoneNumber(phone);
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
+  const url = `${baseUrl.replace(/\/$/, "")}/message/sendText/${instance}`;
 
-  console.log(`Sending response notification to ${formattedPhone}`);
+  console.log(`Sending response notification via Evolution API to ${formattedPhone}`);
 
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    // Add client token if available (required for some Z-API accounts)
-    if (clientToken) {
-      headers["Client-Token"] = clientToken;
-    }
-
     const response = await fetch(url, {
       method: "POST",
-      headers,
-      body: JSON.stringify({ phone: formattedPhone, message }),
+      headers: { "Content-Type": "application/json", "apikey": apiKey },
+      body: JSON.stringify({ number: formattedPhone, text: message }),
     });
 
     const result = await response.json();
-    console.log("Z-API response:", result);
-    
-    if (!response.ok || result.error) {
-      console.error("Z-API error:", result);
+    console.log("Evolution API response:", result);
+
+    if (!response.ok) {
+      console.error("Evolution API error:", result);
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
@@ -252,7 +243,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send notifications
       for (const recipient of eligibleRecipients) {
-        await sendZAPIMessage(recipient.whatsapp, message);
+        await sendEvolutionMessage(recipient.whatsapp, message);
       }
 
       // Mark as notified

@@ -25,6 +25,12 @@ interface NotificationRecipient {
   receives_alerts: boolean;
 }
 
+interface EvolutionConfig {
+  baseUrl: string;
+  apiKey: string;
+  instance: string;
+}
+
 const getClockTypeLabel = (type: string): string => {
   const labels: Record<string, string> = {
     entry: "Entrada",
@@ -51,81 +57,52 @@ const getNotificationField = (type: string): keyof NotificationRecipient => {
 };
 
 const formatPhoneNumber = (phone: string): string => {
-  // Remove all non-digits
   const digits = phone.replace(/\D/g, "");
-  
-  // Ensure it starts with country code (55 for Brazil)
   if (!digits.startsWith("55")) {
     return `55${digits}`;
   }
   return digits;
 };
 
-const getZAPIConfig = async (supabase: any): Promise<{ instanceId: string; token: string; clientToken: string | null } | null> => {
-  // First try to get from database (master panel config)
-  const { data: dbConfig } = await supabase
-    .from("zapi_config")
-    .select("instance_id, token, client_token, is_active")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+const getEvolutionConfig = (): EvolutionConfig | null => {
+  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
+  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
+  const instance = Deno.env.get("EVOLUTION_INSTANCE");
 
-  if (dbConfig && dbConfig.instance_id && dbConfig.token) {
-    console.log("Using Z-API config from database");
-    return {
-      instanceId: dbConfig.instance_id,
-      token: dbConfig.token,
-      clientToken: dbConfig.client_token || null,
-    };
+  if (baseUrl && apiKey && instance) {
+    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
   }
-
-  // Fallback to environment variables
-  const instanceId = Deno.env.get("ZAPI_INSTANCE_ID");
-  const token = Deno.env.get("ZAPI_TOKEN");
-  const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
-
-  if (instanceId && token) {
-    console.log("Using Z-API config from environment variables");
-    return { instanceId, token, clientToken: clientToken || null };
-  }
-
   return null;
 };
 
-const sendZAPIMessage = async (phone: string, message: string, zapiConfig: { instanceId: string; token: string; clientToken: string | null }): Promise<boolean> => {
-  const { instanceId, token, clientToken } = zapiConfig;
-
+const sendEvolutionMessage = async (
+  phone: string,
+  message: string,
+  config: EvolutionConfig
+): Promise<boolean> => {
   const formattedPhone = formatPhoneNumber(phone);
-  // Z-API endpoint for sending text messages (correct endpoint: /send-text)
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
+  const url = `${config.baseUrl}/message/sendText/${config.instance}`;
 
-  console.log(`Sending WhatsApp message to ${formattedPhone}`);
-  console.log(`Z-API URL: ${url}`);
+  console.log(`Sending WhatsApp via Evolution API to ${formattedPhone}`);
 
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    // Add client token if available
-    if (clientToken) {
-      headers["Client-Token"] = clientToken;
-    }
-
     const response = await fetch(url, {
       method: "POST",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": config.apiKey,
+      },
       body: JSON.stringify({
-        phone: formattedPhone,
-        message: message,
+        number: formattedPhone,
+        text: message,
       }),
     });
 
     const result = await response.json();
-    console.log("Z-API response:", result);
+    console.log("Evolution API response:", result);
 
-    if (!response.ok || result.error) {
-      console.error("Z-API error:", result);
+    if (!response.ok) {
+      console.error("Evolution API error:", result);
       return false;
     }
 
@@ -137,7 +114,6 @@ const sendZAPIMessage = async (phone: string, message: string, zapiConfig: { ins
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -151,14 +127,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Processing notification for clock record: ${clockRecordId}, type: ${type}, method: ${method}`);
 
-    // Get clock record with employee and location details
     const { data: clockRecord, error: clockError } = await supabase
       .from("clock_records")
-      .select(`
-        *,
-        employees!inner(id, user_id, company_id),
-        locations!inner(id, name)
-      `)
+      .select(`*, employees!inner(id, user_id, company_id), locations!inner(id, name)`)
       .eq("id", clockRecordId)
       .single();
 
@@ -170,14 +141,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get employee profile separately
     const { data: profile } = await supabase
       .from("profiles")
       .select("name, email")
       .eq("id", clockRecord.employees.user_id)
       .single();
 
-    // Get company name if available
     let companyName = "PONTZAP";
     if (clockRecord.employees.company_id) {
       const { data: company } = await supabase
@@ -185,9 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
         .select("name")
         .eq("id", clockRecord.employees.company_id)
         .single();
-      if (company) {
-        companyName = company.name;
-      }
+      if (company) companyName = company.name;
     }
 
     const employeeName = profile?.name || "Funcionário";
@@ -196,15 +163,12 @@ const handler = async (req: Request): Promise<Response> => {
     const clockMethod = method || clockRecord.method;
     const timestamp = new Date(clockRecord.timestamp);
     const formattedTime = timestamp.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/Sao_Paulo",
+      hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
     });
     const formattedDate = timestamp.toLocaleDateString("pt-BR", {
       timeZone: "America/Sao_Paulo",
     });
 
-    // Get notification recipients
     const { data: recipients, error: recipientsError } = await supabase
       .from("notification_recipients")
       .select("*");
@@ -225,42 +189,29 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get Z-API configuration
-    const zapiConfig = await getZAPIConfig(supabase);
-    if (!zapiConfig) {
-      console.error("Z-API credentials not configured");
+    const evolutionConfig = getEvolutionConfig();
+    if (!evolutionConfig) {
+      console.error("Evolution API credentials not configured (EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE)");
       return new Response(
-        JSON.stringify({ error: "Z-API credentials not configured" }),
+        JSON.stringify({ error: "Evolution API credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Filter recipients based on scope and notification type
     const notificationField = getNotificationField(type);
     const eligibleRecipients = recipients.filter((recipient: NotificationRecipient) => {
-      // Check if recipient wants this type of notification
-      if (!recipient[notificationField]) {
-        return false;
-      }
-
-      // Check scope
-      if (recipient.scope_type === "all") {
-        return true;
-      }
-
-      if (recipient.scope_type === "location" && recipient.scope_id === locationId) {
-        return true;
-      }
-
+      if (!recipient[notificationField]) return false;
+      if (recipient.scope_type === "all") return true;
+      if (recipient.scope_type === "location" && recipient.scope_id === locationId) return true;
       return false;
     });
 
     console.log(`Found ${eligibleRecipients.length} eligible recipients`);
 
-    // Build message with company name and method
     const clockTypeLabel = getClockTypeLabel(type);
     const methodLabel = getMethodLabel(clockMethod);
-    const message = `🕐 *PONTZAP - Registro de Ponto*\n\n` +
+    const message =
+      `🕐 *PONTZAP - Registro de Ponto*\n\n` +
       `🏢 *Empresa:* ${companyName}\n` +
       `📋 *Tipo:* ${clockTypeLabel}\n` +
       `👤 *Funcionário:* ${employeeName}\n` +
@@ -269,10 +220,9 @@ const handler = async (req: Request): Promise<Response> => {
       `⏰ *Horário:* ${formattedTime}\n` +
       `🔍 *Método:* ${methodLabel}`;
 
-    // Send messages to all eligible recipients
     const results = await Promise.all(
       eligibleRecipients.map(async (recipient: NotificationRecipient) => {
-        const success = await sendZAPIMessage(recipient.whatsapp, message, zapiConfig);
+        const success = await sendEvolutionMessage(recipient.whatsapp, message, evolutionConfig);
         return { recipient: recipient.name, success };
       })
     );
@@ -283,12 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Notifications sent: ${successCount} success, ${failCount} failed`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        sent: successCount,
-        failed: failCount,
-        details: results,
-      }),
+      JSON.stringify({ success: true, sent: successCount, failed: failCount, details: results }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {

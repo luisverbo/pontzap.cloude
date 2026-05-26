@@ -24,69 +24,42 @@ const formatPhoneNumber = (phone: string): string => {
   return digits;
 };
 
-const getZAPIConfig = async (supabase: any): Promise<{ instanceId: string; token: string; clientToken: string | null } | null> => {
-  // First try to get from database (master panel config)
-  const { data: dbConfig } = await supabase
-    .from("zapi_config")
-    .select("instance_id, token, client_token, is_active")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+interface EvolutionConfig {
+  baseUrl: string;
+  apiKey: string;
+  instance: string;
+}
 
-  if (dbConfig && dbConfig.instance_id && dbConfig.token) {
-    console.log("Using Z-API config from database");
-    return {
-      instanceId: dbConfig.instance_id,
-      token: dbConfig.token,
-      clientToken: dbConfig.client_token || null,
-    };
+const getEvolutionConfig = (): EvolutionConfig | null => {
+  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
+  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
+  const instance = Deno.env.get("EVOLUTION_INSTANCE");
+  if (baseUrl && apiKey && instance) {
+    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
   }
-
-  // Fallback to environment variables
-  const instanceId = Deno.env.get("ZAPI_INSTANCE_ID");
-  const token = Deno.env.get("ZAPI_TOKEN");
-  const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
-
-  if (instanceId && token) {
-    console.log("Using Z-API config from environment variables");
-    return { instanceId, token, clientToken: clientToken || null };
-  }
-
   return null;
 };
 
-const sendZAPIMessage = async (phone: string, message: string, zapiConfig: { instanceId: string; token: string; clientToken: string | null }): Promise<boolean> => {
-  const { instanceId, token, clientToken } = zapiConfig;
-
+const sendEvolutionMessage = async (
+  phone: string,
+  message: string,
+  config: EvolutionConfig
+): Promise<boolean> => {
   const formattedPhone = formatPhoneNumber(phone);
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
-
-  console.log(`Sending message to ${formattedPhone}`);
-
+  const url = `${config.baseUrl}/message/sendText/${config.instance}`;
+  console.log(`Sending WhatsApp via Evolution API to ${formattedPhone}`);
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    // Add client token if available
-    if (clientToken) {
-      headers["Client-Token"] = clientToken;
-    }
-
     const response = await fetch(url, {
       method: "POST",
-      headers,
-      body: JSON.stringify({ phone: formattedPhone, message }),
+      headers: { "Content-Type": "application/json", "apikey": config.apiKey },
+      body: JSON.stringify({ number: formattedPhone, text: message }),
     });
-
     const result = await response.json();
-    console.log("Z-API response:", result);
-    
-    if (!response.ok || result.error) {
-      console.error("Z-API error:", result);
+    console.log("Evolution API response:", result);
+    if (!response.ok) {
+      console.error("Evolution API error:", result);
       return false;
     }
-    
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
@@ -350,11 +323,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get Z-API configuration
-    const zapiConfig = await getZAPIConfig(supabase);
-    if (!zapiConfig) {
-      console.error("Z-API credentials not configured");
+    const evolutionConfig = getEvolutionConfig();
+    if (!evolutionConfig) {
+      console.error("Evolution API credentials not configured");
       return new Response(
-        JSON.stringify({ error: "Z-API credentials not configured" }),
+        JSON.stringify({ error: "Evolution API credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -408,7 +381,7 @@ const handler = async (req: Request): Promise<Response> => {
           `O funcionário está em cima da hora e ainda não chegou. Aguardando resposta dele.`;
 
         for (const recipient of eligibleRecipients) {
-          const success = await sendZAPIMessage(recipient.whatsapp, adminMessage, zapiConfig);
+          const success = await sendEvolutionMessage(recipient.whatsapp, adminMessage, evolutionConfig);
           results.push({
             type: "admin_alert",
             recipient: recipient.name,
@@ -427,7 +400,7 @@ const handler = async (req: Request): Promise<Response> => {
           `👉 ${responseUrl}\n\n` +
           `_Informe se está a caminho ou se vai faltar._`;
 
-        const employeeSuccess = await sendZAPIMessage(alert.employeePhone, employeeMessage, zapiConfig);
+        const employeeSuccess = await sendEvolutionMessage(alert.employeePhone, employeeMessage, evolutionConfig);
         results.push({
           type: "employee_alert",
           recipient: alert.employeeName,

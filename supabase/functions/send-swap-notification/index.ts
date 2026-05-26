@@ -19,77 +19,49 @@ const formatPhoneNumber = (phone: string): string => {
   return digits;
 };
 
-const getZAPIConfig = async (supabase: any): Promise<{ instanceId: string; token: string; clientToken: string | null } | null> => {
-  // First try to get from database (master panel config)
-  const { data: dbConfig } = await supabase
-    .from("zapi_config")
-    .select("instance_id, token, client_token, is_active")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+interface EvolutionConfig {
+  baseUrl: string;
+  apiKey: string;
+  instance: string;
+}
 
-  if (dbConfig && dbConfig.instance_id && dbConfig.token) {
-    console.log("Using Z-API config from database");
-    return {
-      instanceId: dbConfig.instance_id,
-      token: dbConfig.token,
-      clientToken: dbConfig.client_token || null,
-    };
+const getEvolutionConfig = (): EvolutionConfig | null => {
+  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
+  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
+  const instance = Deno.env.get("EVOLUTION_INSTANCE");
+  if (baseUrl && apiKey && instance) {
+    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
   }
-
-  // Fallback to environment variables
-  const instanceId = Deno.env.get("ZAPI_INSTANCE_ID");
-  const token = Deno.env.get("ZAPI_TOKEN");
-  const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
-
-  if (instanceId && token) {
-    console.log("Using Z-API config from environment variables");
-    return { instanceId, token, clientToken: clientToken || null };
-  }
-
   return null;
 };
 
-const sendZAPIMessage = async (phone: string, message: string, zapiConfig: { instanceId: string; token: string; clientToken: string | null }): Promise<boolean> => {
-  const { instanceId, token, clientToken } = zapiConfig;
-
+const sendEvolutionMessage = async (
+  phone: string,
+  message: string,
+  config: EvolutionConfig
+): Promise<boolean> => {
   const formattedPhone = formatPhoneNumber(phone);
-  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`;
-
-  console.log(`Sending WhatsApp message to ${formattedPhone}`);
-
+  const url = `${config.baseUrl}/message/sendText/${config.instance}`;
+  console.log(`Sending WhatsApp via Evolution API to ${formattedPhone}`);
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    if (clientToken) {
-      headers["Client-Token"] = clientToken;
-    }
-
     const response = await fetch(url, {
       method: "POST",
-      headers,
-      body: JSON.stringify({
-        phone: formattedPhone,
-        message: message,
-      }),
+      headers: { "Content-Type": "application/json", "apikey": config.apiKey },
+      body: JSON.stringify({ number: formattedPhone, text: message }),
     });
-
     const result = await response.json();
-    console.log("Z-API response:", result);
-
-    if (!response.ok || result.error) {
-      console.error("Z-API error:", result);
+    console.log("Evolution API response:", result);
+    if (!response.ok) {
+      console.error("Evolution API error:", result);
       return false;
     }
-
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
     return false;
   }
 };
+
 
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr + 'T12:00:00');
@@ -166,11 +138,11 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("receives_alerts", true);
 
     // Get Z-API configuration
-    const zapiConfig = await getZAPIConfig(supabase);
-    if (!zapiConfig) {
-      console.error("Z-API credentials not configured");
+    const evolutionConfig = getEvolutionConfig();
+    if (!evolutionConfig) {
+      console.error("Evolution API credentials not configured");
       return new Response(
-        JSON.stringify({ error: "Z-API credentials not configured" }),
+        JSON.stringify({ error: "Evolution API credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -188,7 +160,7 @@ const handler = async (req: Request): Promise<Response> => {
           `📅 *Pelo seu dia:* ${formatDate(swap.target_date)} (${formatTime(swap.target_start_time)}-${formatTime(swap.target_end_time)})\n\n` +
           `Acesse o app para aceitar ou recusar.`;
 
-        const success = await sendZAPIMessage(targetProfile.phone, message, zapiConfig);
+        const success = await sendEvolutionMessage(targetProfile.phone, message, evolutionConfig);
         results.push({ recipient: targetName, success });
       }
     } else if (notificationType === "accepted") {
@@ -201,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
           `📅 *Trocado por:* ${formatDate(swap.target_date)}\n\n` +
           `Aguardando aprovação do administrador.`;
 
-        const success = await sendZAPIMessage(requesterProfile.phone, message, zapiConfig);
+        const success = await sendEvolutionMessage(requesterProfile.phone, message, evolutionConfig);
         results.push({ recipient: requesterName, success });
       }
 
@@ -215,7 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
             `📅 *Data troca:* ${formatDate(swap.requester_date)} ↔ ${formatDate(swap.target_date)}\n\n` +
             `A troca foi aceita pelo colega e aguarda sua aprovação.`;
 
-          const success = await sendZAPIMessage(recipient.whatsapp, message, zapiConfig);
+          const success = await sendEvolutionMessage(recipient.whatsapp, message, evolutionConfig);
           results.push({ recipient: recipient.name, success });
         }
       }
@@ -230,19 +202,19 @@ const handler = async (req: Request): Promise<Response> => {
         `As escalas foram atualizadas automaticamente.`;
 
       if (requesterProfile?.phone) {
-        const success = await sendZAPIMessage(
+        const success = await sendEvolutionMessage(
           requesterProfile.phone,
           approvalMessage(requesterName, swap.requester_date, swap.target_date),
-          zapiConfig
+          evolutionConfig
         );
         results.push({ recipient: requesterName, success });
       }
 
       if (targetProfile?.phone) {
-        const success = await sendZAPIMessage(
+        const success = await sendEvolutionMessage(
           targetProfile.phone,
           approvalMessage(targetName, swap.target_date, swap.requester_date),
-          zapiConfig
+          evolutionConfig
         );
         results.push({ recipient: targetName, success });
       }
@@ -254,7 +226,7 @@ const handler = async (req: Request): Promise<Response> => {
           `A sua solicitação de troca para ${formatDate(swap.requester_date)} foi recusada.\n\n` +
           `${swap.reason ? `*Motivo:* ${swap.reason}` : ''}`;
 
-        const success = await sendZAPIMessage(requesterProfile.phone, message, zapiConfig);
+        const success = await sendEvolutionMessage(requesterProfile.phone, message, evolutionConfig);
         results.push({ recipient: requesterName, success });
       }
     }
