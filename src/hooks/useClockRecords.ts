@@ -171,52 +171,42 @@ export function useClockRecords(employeeId?: string) {
       }
     }
 
-    // Validate GPS location if provided
-    if (method === 'gps' && latitude !== undefined && longitude !== undefined) {
-      const validation = await validateLocation(locationId, latitude, longitude);
-      
-      console.log('GPS Validation:', {
-        userLat: latitude,
-        userLng: longitude,
-        locationLat: validation.location?.latitude,
-        locationLng: validation.location?.longitude,
-        distance: validation.distance,
-        radius: validation.location?.radius,
-        valid: validation.valid
-      });
-      
-      if (!validation.valid) {
-        const distanceText = validation.distance > 1000 
-          ? `${(validation.distance / 1000).toFixed(1)}km`
-          : `${validation.distance}m`;
-        
-        toast.error(
-          `Você está a ${distanceText} do local "${validation.location?.name}". Raio permitido: ${validation.location?.radius || 100}m.`,
-          { duration: 8000 }
-        );
-        return { success: false, outsideRadius: true, distance: validation.distance };
-      }
-    }
-
+    // Online: register through the server. The Edge Function is the trust
+    // boundary — it sets the timestamp, validates the geofence and the company
+    // ownership of the location, and creates the folguista payment record. The
+    // client no longer inserts directly.
     try {
-      const { data, error } = await supabase.from('clock_records').insert({
-        employee_id: employeeId,
-        location_id: locationId,
-        type,
-        method,
-        latitude,
-        longitude,
-        timestamp,
-      }).select('id').single();
+      const { data, error } = await supabase.functions.invoke('register-clock', {
+        body: { type, locationId, method, latitude, longitude },
+      });
 
-      if (error) throw error;
+      // Non-2xx responses arrive as `error` with the Response in error.context
+      if (error) {
+        let info: any = {};
+        try { info = await (error as any).context?.json?.(); } catch { /* ignore */ }
+        if (info?.outsideRadius) {
+          toast.error(info.error || 'Você está fora do raio permitido.', { duration: 8000 });
+          return { success: false, outsideRadius: true, distance: info.distance };
+        }
+        toast.error(info?.error || 'Erro ao registrar ponto');
+        return { success: false };
+      }
+
+      if (!data?.success) {
+        if (data?.outsideRadius) {
+          toast.error(data.error || 'Você está fora do raio permitido.', { duration: 8000 });
+          return { success: false, outsideRadius: true, distance: data.distance };
+        }
+        toast.error(data?.error || 'Erro ao registrar ponto');
+        return { success: false };
+      }
 
       await fetchRecords();
       toast.success('Ponto registrado com sucesso!');
-      return { success: true, recordId: data?.id };
+      return { success: true, recordId: data.recordId };
     } catch (error: any) {
       console.error('Error clocking in:', error);
-      
+
       // If network error, try to save offline
       if (error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
         try {

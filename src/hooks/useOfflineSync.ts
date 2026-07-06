@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -14,6 +14,8 @@ export function useOfflineSync() {
   const [online, setOnline] = useState(isOnline());
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  // Synchronous lock so a concurrent online-event + mount-effect can't double-flush
+  const syncingRef = useRef(false);
 
   const updatePendingCount = useCallback(async () => {
     try {
@@ -25,73 +27,92 @@ export function useOfflineSync() {
   }, []);
 
   const syncPendingRecords = useCallback(async () => {
-    if (!isOnline() || syncing) return;
+    if (!isOnline() || syncingRef.current) return;
+    syncingRef.current = true;
 
-    const pendingRecords = await getPendingClockRecords();
-    if (pendingRecords.length === 0) return;
+    try {
+      const pendingRecords = await getPendingClockRecords();
+      if (pendingRecords.length === 0) return;
 
-    setSyncing(true);
-    let syncedCount = 0;
-    let failedCount = 0;
+      setSyncing(true);
+      let syncedCount = 0;
+      let failedCount = 0;
 
-    for (const record of pendingRecords) {
-      try {
-        const { error } = await supabase.from('clock_records').insert({
-          employee_id: record.employee_id,
-          location_id: record.location_id,
-          type: record.type,
-          timestamp: record.timestamp,
-          method: record.method,
-          latitude: record.latitude,
-          longitude: record.longitude,
-        });
+      for (const record of pendingRecords) {
+        try {
+          // Flush through the server so the geofence/tenant checks still apply.
+          // offlineTimestamp preserves the original punch time (server bounds it).
+          const { data, error } = await supabase.functions.invoke('register-clock', {
+            body: {
+              type: record.type,
+              locationId: record.location_id,
+              method: record.method,
+              latitude: record.latitude,
+              longitude: record.longitude,
+              offlineTimestamp: record.timestamp,
+            },
+          });
 
-        if (error) {
-          // Check if it's a duplicate error
-          if (error.message.includes('duplicado') || error.message.includes('duplicate')) {
-            await deleteRecord(record.id);
-            syncedCount++;
-          } else {
-            console.error('Error syncing record:', error);
-            failedCount++;
+          if (error) {
+            // With a Response context it's a business rejection (dup / geofence /
+            // invalid) that will never succeed → drop it. Without context it's a
+            // network/5xx error → keep it for the next retry.
+            const ctx = (error as any).context;
+            if (ctx) {
+              let info: any = {};
+              try { info = await ctx.json?.(); } catch { /* ignore */ }
+              await deleteRecord(record.id);
+              if (info?.duplicate) {
+                syncedCount++;
+              } else {
+                failedCount++;
+              }
+            } else {
+              failedCount++;
+            }
+            continue;
           }
-        } else {
+
           await deleteRecord(record.id);
           syncedCount++;
 
-          // Send WhatsApp notification for synced record
-          try {
-            await supabase.functions.invoke('send-whatsapp', {
-              body: { 
-                clockRecordId: record.id, 
-                type: record.type, 
-                method: record.method,
-                offlineSync: true
-              }
-            });
-          } catch (notifError) {
-            console.error('Error sending notification for synced record:', notifError);
+          // Send WhatsApp notification using the REAL server record id
+          if (data?.recordId) {
+            try {
+              await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                  clockRecordId: data.recordId,
+                  type: record.type,
+                  method: record.method,
+                  offlineSync: true,
+                },
+              });
+            } catch (notifError) {
+              console.error('Error sending notification for synced record:', notifError);
+            }
           }
+        } catch (error) {
+          console.error('Error processing record:', error);
+          failedCount++;
         }
-      } catch (error) {
-        console.error('Error processing record:', error);
-        failedCount++;
       }
-    }
 
-    setSyncing(false);
-    await updatePendingCount();
+      await updatePendingCount();
 
-    if (syncedCount > 0) {
-      toast.success(`✅ ${syncedCount} registro(s) sincronizado(s) com sucesso!`);
-    }
-    if (failedCount > 0) {
-      toast.error(`❌ ${failedCount} registro(s) não puderam ser sincronizados. Tente novamente mais tarde.`);
-    }
+      if (syncedCount > 0) {
+        toast.success(`✅ ${syncedCount} registro(s) sincronizado(s) com sucesso!`);
+      }
+      if (failedCount > 0) {
+        toast.error(`❌ ${failedCount} registro(s) não puderam ser sincronizados. Tente novamente mais tarde.`);
+      }
 
-    // Clean up old synced records
-    await clearSyncedRecords();
-  }, [syncing, updatePendingCount]);
+      // Clean up old synced records
+      await clearSyncedRecords();
+    } finally {
+      setSyncing(false);
+      syncingRef.current = false;
+    }
+  }, [updatePendingCount]);
 
   useEffect(() => {
     const handleOnline = () => {

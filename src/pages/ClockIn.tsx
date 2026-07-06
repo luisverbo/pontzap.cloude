@@ -287,40 +287,9 @@ export default function ClockIn() {
     fetchEmployeeData();
   }, [user]);
 
-  const autoCreateAnotacao = async (employeeId: string, valor: number, locationId: string | null) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const now = new Date();
-
-      const { data: existing } = await supabase
-        .from('anotacoes_folguista')
-        .select('id')
-        .eq('folguista_id', employeeId)
-        .eq('data_trabalho', today)
-        .maybeSingle();
-
-      if (existing) return;
-
-      const { data: periodo } = await supabase
-        .from('anotacoes_periodo')
-        .select('id')
-        .eq('folguista_id', employeeId)
-        .eq('periodo_mes', now.getMonth() + 1)
-        .eq('periodo_ano', now.getFullYear())
-        .maybeSingle();
-
-      await supabase.from('anotacoes_folguista').insert({
-        folguista_id: employeeId,
-        data_trabalho: today,
-        valor,
-        status: 'a_pagar',
-        periodo_id: periodo?.id ?? null,
-        local_id: locationId ?? null,
-      });
-    } catch (err) {
-      console.error('Erro ao criar registro de folguista:', err);
-    }
-  };
+  // Folguista payment records are now created server-side by the register-clock
+  // Edge Function (correct timezone, value from the DB, RLS-safe), so there is
+  // no client-side auto-creation anymore.
 
   const sendWhatsAppNotification = async (clockRecordId: string, type: ClockType, method: 'qr' | 'gps') => {
     try {
@@ -394,9 +363,7 @@ export default function ClockIn() {
       } else {
         sendWhatsAppNotification(result.recordId, type, 'gps');
       }
-      if (type === 'entry' && isSubstitute && employeeData?.valorDiaria) {
-        await autoCreateAnotacao(employeeData.id, employeeData.valorDiaria, locationId);
-      }
+      // The folguista payment record is created server-side on entry.
       await refetch();
     }
 
@@ -411,13 +378,13 @@ export default function ClockIn() {
       return { success: false };
     }
 
-    const result = await clockIn(type, locationId, 'qr');
+    // Send GPS coordinates along with the QR punch so the server can enforce
+    // the geofence — a photo/screenshot of the QR from home no longer works.
+    const result = await clockIn(type, locationId, 'qr', location?.lat, location?.lng);
 
     if (result.success && result.recordId) {
       sendWhatsAppNotification(result.recordId, type, 'qr');
-      if (type === 'entry' && employeeData.type === 'substitute' && employeeData.valorDiaria) {
-        await autoCreateAnotacao(employeeData.id, employeeData.valorDiaria, locationId);
-      }
+      // The folguista payment record is created server-side on entry.
       await refetch();
     }
 
