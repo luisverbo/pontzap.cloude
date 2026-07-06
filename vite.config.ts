@@ -18,6 +18,11 @@ export default defineConfig(() => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        // Take control immediately and drop old caches so a new deploy is served
+        // right away (paired with the auto-reload listener in main.tsx).
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
