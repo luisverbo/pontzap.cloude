@@ -22,11 +22,10 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy Edge Functions
+      - name: Deploy all Edge Functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase functions deploy send-whatsapp --project-ref hzedbdiznmlnlxnmtoho
-          supabase functions deploy check-lateness --project-ref hzedbdiznmlnlxnmtoho
-          supabase functions deploy send-swap-notification --project-ref hzedbdiznmlnlxnmtoho
-          supabase functions deploy respond-lateness --project-ref hzedbdiznmlnlxnmtoho
+          # Deploys every function under supabase/functions/ and respects the
+          # per-function verify_jwt settings in supabase/config.toml
+          supabase functions deploy --project-ref hzedbdiznmlnlxnmtoho
