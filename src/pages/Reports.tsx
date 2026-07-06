@@ -390,6 +390,94 @@ export default function Reports() {
     }
   };
 
+  // Export the raw punches for the period (audit trail with NSR + hash + PIS/CPF).
+  // This is the data an accountant / fiscalização needs; it is AFD-ready data,
+  // exported as CSV for easy reading.
+  const exportMarcacoes = async () => {
+    setExporting(true);
+    try {
+      const impersonatedCompanyId = getImpersonatedCompanyId();
+
+      let empQuery = supabase
+        .from('employees')
+        .select('id, user_id, company_id, cpf, pis');
+      if (impersonatedCompanyId) empQuery = empQuery.eq('company_id', impersonatedCompanyId);
+      const { data: emps } = await empQuery;
+      const employeeIds = (emps || []).map((e: any) => e.id);
+      if (employeeIds.length === 0) {
+        toast.error('Nenhum funcionário para exportar');
+        return;
+      }
+
+      const userIds = (emps || []).map((e: any) => e.user_id);
+      const { data: profs } = await supabase
+        .from('profiles').select('id, name').in('id', userIds.length ? userIds : ['']);
+      const nameByUser: Record<string, string> = {};
+      (profs || []).forEach((p: any) => { nameByUser[p.id] = p.name; });
+      const empById: Record<string, any> = {};
+      (emps || []).forEach((e: any) => { empById[e.id] = e; });
+
+      const { data: recs } = await supabase
+        .from('clock_records')
+        .select('*')
+        .in('employee_id', employeeIds)
+        .gte('timestamp', `${startDate}T00:00:00-03:00`)
+        .lte('timestamp', `${endDate}T23:59:59-03:00`)
+        .order('timestamp', { ascending: true });
+
+      if (!recs || recs.length === 0) {
+        toast.error('Nenhuma marcação no período');
+        return;
+      }
+
+      const locIds = [...new Set(recs.map((r: any) => r.location_id).filter(Boolean))];
+      const { data: locs } = await supabase
+        .from('locations').select('id, name').in('id', locIds.length ? locIds : ['']);
+      const locById: Record<string, string> = {};
+      (locs || []).forEach((l: any) => { locById[l.id] = l.name; });
+
+      const fmt = (iso: string) =>
+        new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+        }).format(new Date(iso));
+
+      const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const header = ['NSR', 'Data/Hora', 'Funcionario', 'CPF', 'PIS', 'Tipo', 'Local', 'Metodo', 'Codigo (SHA-256)'];
+      const lines = [header.map(esc).join(';')];
+
+      for (const r of recs as any[]) {
+        const emp = empById[r.employee_id] || {};
+        lines.push([
+          r.nsr ?? '',
+          fmt(r.timestamp),
+          nameByUser[emp.user_id] || '',
+          emp.cpf || '',
+          emp.pis || '',
+          CLOCK_TYPE_LABELS[r.type as ClockType] || r.type,
+          locById[r.location_id] || '',
+          r.method || '',
+          r.record_hash || '',
+        ].map(esc).join(';'));
+      }
+
+      const csv = '﻿' + lines.join('\r\n'); // BOM for Excel
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `marcacoes-${startDate}-a-${endDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${recs.length} marcações exportadas`);
+    } catch (e: any) {
+      console.error('Erro ao exportar marcações:', e);
+      toast.error('Erro ao exportar marcações');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const exportToPDF = async () => {
     if (!reportData) return;
     
@@ -532,18 +620,29 @@ export default function Reports() {
               Análise detalhada com cálculo de horas extras
             </p>
           </div>
-          <Button 
-            variant="glow" 
-            onClick={exportToPDF} 
-            disabled={!reportData || exporting}
-          >
-            {exporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Exportar PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={exportMarcacoes}
+              disabled={exporting}
+              title="Exportar marcações do período (NSR, hash, PIS/CPF) para o contador"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Exportar Marcações
+            </Button>
+            <Button
+              variant="glow"
+              onClick={exportToPDF}
+              disabled={!reportData || exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Exportar PDF
+            </Button>
+          </div>
         </div>
 
         {/* Period Filter */}
