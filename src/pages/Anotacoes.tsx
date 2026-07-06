@@ -119,8 +119,28 @@ export default function Anotacoes() {
   const { companyStatus } = useAuth();
   // Effective company for writes: the impersonated company (master support mode)
   // or the admin's own company. Required so inserts satisfy the RLS company check.
-  const getEffectiveCompanyId = (): string | null =>
-    getImpersonatedCompanyId() || companyStatus?.id || null;
+  // Falls back to a direct DB lookup so it never returns null when the user is
+  // actually linked to a company (AuthContext may not have resolved it yet).
+  const resolveCompanyId = async (): Promise<string | null> => {
+    const imp = getImpersonatedCompanyId();
+    if (imp) return imp;
+    if (companyStatus?.id) return companyStatus.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    // Try the employee link first, then the company they own as admin
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (emp?.company_id) return emp.company_id;
+    const { data: comp } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('admin_user_id', user.id)
+      .maybeSingle();
+    return comp?.id ?? null;
+  };
 
   const [folguistas, setFolguistas] = useState<Folguista[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -367,6 +387,8 @@ export default function Anotacoes() {
 
     setSaving(true);
     try {
+      const companyId = await resolveCompanyId();
+
       const { error } = await supabase
         .from('anotacoes_periodo')
         .insert({
@@ -374,7 +396,7 @@ export default function Anotacoes() {
           periodo_mes: parseInt(periodoMes),
           periodo_ano: parseInt(periodoAno),
           observacao: periodoObs || null,
-          company_id: getEffectiveCompanyId()
+          company_id: companyId
         });
 
       if (error) {
@@ -389,9 +411,9 @@ export default function Anotacoes() {
       setShowAddPeriodoModal(false);
       resetPeriodoForm();
       fetchPeriodos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding periodo:', error);
-      toast.error('Erro ao criar período');
+      toast.error(`Erro ao criar período: ${error?.message || error?.code || 'desconhecido'}`);
     } finally {
       setSaving(false);
     }
@@ -424,6 +446,8 @@ export default function Anotacoes() {
 
     setSaving(true);
     try {
+      const companyId = await resolveCompanyId();
+
       const { error } = await supabase
         .from('anotacoes_folguista')
         .insert({
@@ -434,7 +458,7 @@ export default function Anotacoes() {
           valor: parseFloat(valor),
           observacao: observacao || null,
           status: 'a_pagar',
-          company_id: getEffectiveCompanyId()
+          company_id: companyId
         });
 
       if (error) throw error;
@@ -443,9 +467,9 @@ export default function Anotacoes() {
       setShowAddModal(false);
       resetForm();
       fetchAnotacoes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding anotacao:', error);
-      toast.error('Erro ao registrar dia trabalhado');
+      toast.error(`Erro ao registrar dia: ${error?.message || error?.code || 'desconhecido'}`);
     } finally {
       setSaving(false);
     }
