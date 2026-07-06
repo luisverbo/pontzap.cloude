@@ -10,7 +10,7 @@ import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 interface QRCodeScannerProps {
   onScan: (locationId: string, locationName: string) => void;
   onClose: () => void;
-  onClockIn: (type: ClockType, locationId: string) => Promise<{ success: boolean }>;
+  onClockIn: (type: ClockType, locationId: string, photo?: string) => Promise<{ success: boolean }>;
   disabledTypes: ClockType[];
   defaultClockType?: ClockType | null;
   onGPSFallback?: () => void;
@@ -33,6 +33,66 @@ export function QRCodeScanner({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoResolveRef = useRef<((v: string | null) => void) | null>(null);
+
+  // Prompt for a selfie (front camera). Resolves with a compressed data URL, or
+  // null if cancelled/failed. MUST be called synchronously from a tap so iOS
+  // keeps the user-gesture context and actually opens the camera.
+  const capturePhoto = (): Promise<string | null> =>
+    new Promise((resolve) => {
+      const input = photoInputRef.current;
+      if (!input) { resolve(null); return; }
+      photoResolveRef.current = resolve;
+      // Fallback: if the picker is dismissed without a file (no change event on
+      // iOS), the window regains focus — resolve null shortly after so we never hang.
+      const onFocus = () => {
+        setTimeout(() => {
+          if (photoResolveRef.current) {
+            photoResolveRef.current(null);
+            photoResolveRef.current = null;
+          }
+        }, 1200);
+        window.removeEventListener('focus', onFocus);
+      };
+      window.addEventListener('focus', onFocus);
+      input.value = '';
+      input.click();
+    });
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const resolve = photoResolveRef.current;
+    photoResolveRef.current = null;
+    const file = e.target.files?.[0];
+    if (!file || !resolve) { resolve?.(null); return; }
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const compressed = await new Promise<string>((res) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 640;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { res(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          res(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => res(dataUrl);
+        img.src = dataUrl;
+      });
+      resolve(compressed);
+    } catch {
+      resolve(null);
+    }
+  };
 
   // Auto-start camera when component mounts
   useEffect(() => {
@@ -162,13 +222,17 @@ export function QRCodeScanner({
     const locId = locationId || scannedLocation?.id;
     if (!locId) return;
 
+    // Capture the selfie FIRST, synchronously within this tap, so iOS opens the
+    // camera. Auto-clock (locationId passed from a decoded QR, no tap) skips it.
+    const photo = locationId ? null : await capturePhoto();
+
     setLoading(type);
-    const result = await onClockIn(type, locId);
-    
+    const result = await onClockIn(type, locId, photo || undefined);
+
     if (result.success) {
       onClose();
     }
-    
+
     setLoading(null);
   };
 
@@ -179,6 +243,15 @@ export function QRCodeScanner({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in overflow-auto">
+      {/* Hidden selfie capture (front camera on mobile) */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={handlePhotoSelected}
+      />
       <div className="container max-w-md mx-auto px-4 py-4 sm:py-6 min-h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-3 sm:mb-4">
