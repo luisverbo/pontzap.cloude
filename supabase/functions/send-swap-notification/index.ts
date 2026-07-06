@@ -25,7 +25,18 @@ interface EvolutionConfig {
   instance: string;
 }
 
-const getEvolutionConfig = (): EvolutionConfig | null => {
+const getEvolutionConfig = async (supabase: any): Promise<EvolutionConfig | null> => {
+  try {
+    const { data } = await supabase
+      .from("evolution_config")
+      .select("base_url, api_key, instance, is_active")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (data && data.base_url && data.api_key && data.instance) {
+      return { baseUrl: String(data.base_url).replace(/\/$/, ""), apiKey: data.api_key, instance: data.instance };
+    }
+  } catch (_e) { /* table may not exist yet */ }
   const baseUrl = Deno.env.get("EVOLUTION_API_URL");
   const apiKey = Deno.env.get("EVOLUTION_API_KEY");
   const instance = Deno.env.get("EVOLUTION_INSTANCE");
@@ -138,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("receives_alerts", true);
 
     // Get Z-API configuration
-    const evolutionConfig = getEvolutionConfig();
+    const evolutionConfig = await getEvolutionConfig(supabase);
     if (!evolutionConfig) {
       console.error("Evolution API credentials not configured");
       return new Response(

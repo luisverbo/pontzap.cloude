@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -125,6 +126,58 @@ export default function MasterPanel() {
   });
   const [zapiSaving, setZapiSaving] = useState(false);
 
+  const [evolutionConfig, setEvolutionConfig] = useState<{ id?: string; base_url: string; api_key: string; instance: string; is_active: boolean }>({
+    base_url: '',
+    api_key: '',
+    instance: '',
+    is_active: true,
+  });
+  const [evolutionSaving, setEvolutionSaving] = useState(false);
+
+  const loadEvolutionConfig = async () => {
+    const { data } = await supabase.from('evolution_config').select('*').limit(1).maybeSingle();
+    if (data) {
+      setEvolutionConfig({
+        id: data.id,
+        base_url: data.base_url || '',
+        api_key: data.api_key || '',
+        instance: data.instance || '',
+        is_active: data.is_active ?? true,
+      });
+    }
+  };
+
+  const handleSaveEvolution = async () => {
+    if (!evolutionConfig.base_url || !evolutionConfig.api_key || !evolutionConfig.instance) {
+      toast.error('Preencha URL, API Key e Instância');
+      return;
+    }
+    setEvolutionSaving(true);
+    try {
+      const payload = {
+        base_url: evolutionConfig.base_url.trim(),
+        api_key: evolutionConfig.api_key.trim(),
+        instance: evolutionConfig.instance.trim(),
+        is_active: evolutionConfig.is_active,
+        updated_at: new Date().toISOString(),
+      };
+      if (evolutionConfig.id) {
+        const { error } = await supabase.from('evolution_config').update(payload).eq('id', evolutionConfig.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('evolution_config').insert(payload).select('id').single();
+        if (error) throw error;
+        setEvolutionConfig((c) => ({ ...c, id: data.id }));
+      }
+      toast.success('Evolution API salva com sucesso!');
+    } catch (e: any) {
+      console.error('Error saving evolution config:', e);
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setEvolutionSaving(false);
+    }
+  };
+
   useEffect(() => {
     checkMasterStatus();
   }, [user]);
@@ -176,6 +229,8 @@ export default function MasterPanel() {
           is_active: zapiRes.data.is_active ?? true,
         });
       }
+
+      await loadEvolutionConfig();
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
@@ -1107,7 +1162,60 @@ export default function MasterPanel() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Configurações da Z-API (WhatsApp)
+                  Evolution API (WhatsApp)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Conecte a sua Evolution API própria. Estas credenciais são usadas para
+                    enviar e receber mensagens (notificações, alertas e bater ponto pelo WhatsApp).
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>URL da API</Label>
+                  <Input
+                    placeholder="http://SEU_IP:8080"
+                    value={evolutionConfig.base_url}
+                    onChange={(e) => setEvolutionConfig({ ...evolutionConfig, base_url: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <Input
+                    placeholder="Sua chave global da Evolution"
+                    value={evolutionConfig.api_key}
+                    onChange={(e) => setEvolutionConfig({ ...evolutionConfig, api_key: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Instância</Label>
+                  <Input
+                    placeholder="Nome da instância (ex: PontaZap)"
+                    value={evolutionConfig.instance}
+                    onChange={(e) => setEvolutionConfig({ ...evolutionConfig, instance: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="evolution-active"
+                    checked={evolutionConfig.is_active}
+                    onCheckedChange={(checked) => setEvolutionConfig({ ...evolutionConfig, is_active: checked as boolean })}
+                  />
+                  <Label htmlFor="evolution-active">Ativa</Label>
+                </div>
+                <Button onClick={handleSaveEvolution} disabled={evolutionSaving} className="w-full">
+                  {evolutionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Salvar Evolution API
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Configurações da Z-API (WhatsApp) — legado
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">

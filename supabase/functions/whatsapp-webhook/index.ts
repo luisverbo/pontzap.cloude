@@ -29,15 +29,32 @@ const CLOCK_LABELS: Record<string, string> = {
   exit: "Saída",
 };
 
-async function sendWhatsApp(phone: string, message: string) {
+async function resolveEvolution(supabase: any): Promise<{ baseUrl: string; apiKey: string; instance: string } | null> {
+  try {
+    const { data } = await supabase
+      .from("evolution_config")
+      .select("base_url, api_key, instance, is_active")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (data && data.base_url && data.api_key && data.instance) {
+      return { baseUrl: String(data.base_url).replace(/\/$/, ""), apiKey: data.api_key, instance: data.instance };
+    }
+  } catch (_e) { /* ignore */ }
   const baseUrl = Deno.env.get("EVOLUTION_API_URL");
   const apiKey = Deno.env.get("EVOLUTION_API_KEY");
   const instance = Deno.env.get("EVOLUTION_INSTANCE");
-  if (!baseUrl || !apiKey || !instance) return;
+  if (baseUrl && apiKey && instance) return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
+  return null;
+}
+
+async function sendWhatsApp(supabase: any, phone: string, message: string) {
+  const cfg = await resolveEvolution(supabase);
+  if (!cfg) return;
   try {
-    await fetch(`${baseUrl.replace(/\/$/, "")}/message/sendText/${instance}`, {
+    await fetch(`${cfg.baseUrl}/message/sendText/${cfg.instance}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: apiKey },
+      headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
       body: JSON.stringify({ number: normalizePhone(phone), text: message }),
     });
   } catch (e) {
@@ -92,7 +109,7 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     if (!profile) {
-      await sendWhatsApp(senderPhone, "Não encontrei seu cadastro no PONTZAP. Fale com o administrador.");
+      await sendWhatsApp(supabase, senderPhone, "Não encontrei seu cadastro no PONTZAP. Fale com o administrador.");
       return ok();
     }
 
@@ -103,14 +120,13 @@ serve(async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (!employee || !employee.is_active) {
-      await sendWhatsApp(senderPhone, "Seu cadastro está inativo. Fale com o administrador.");
+      await sendWhatsApp(supabase, senderPhone, "Seu cadastro está inativo. Fale com o administrador.");
       return ok();
     }
 
     // Need a location to validate the geofence
     if (!loc || typeof loc.degreesLatitude !== "number") {
-      await sendWhatsApp(
-        senderPhone,
+      await sendWhatsApp(supabase, senderPhone,
         `Olá ${profile.name.split(" ")[0]}! Para bater o ponto, toque no 📎 e envie sua *Localização atual*. Registro o ponto automaticamente. ✅`
       );
       return ok();
@@ -134,8 +150,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!best || best.dist > best.radius) {
       const d = best ? Math.round(best.dist) : 0;
       const dText = d > 1000 ? `${(d / 1000).toFixed(1)}km` : `${d}m`;
-      await sendWhatsApp(
-        senderPhone,
+      await sendWhatsApp(supabase, senderPhone,
         best
           ? `Você está a ${dText} de "${best.name}", fora do raio permitido. Chegue ao local e envie a localização novamente.`
           : "Nenhum local de trabalho cadastrado para sua empresa."
@@ -165,7 +180,7 @@ serve(async (req: Request): Promise<Response> => {
     else type = !types.has("entry") ? "entry" : !types.has("exit") ? "exit" : "exit";
 
     if (types.has(type)) {
-      await sendWhatsApp(senderPhone, `Você já registrou *${CLOCK_LABELS[type]}* hoje. ✅`);
+      await sendWhatsApp(supabase, senderPhone, `Você já registrou *${CLOCK_LABELS[type]}* hoje. ✅`);
       return ok();
     }
 
@@ -187,7 +202,7 @@ serve(async (req: Request): Promise<Response> => {
 
     if (insErr) {
       const dup = /duplicad|duplicate/i.test(insErr.message || "");
-      await sendWhatsApp(senderPhone, dup ? "Este ponto já foi registrado há instantes." : "Erro ao registrar o ponto. Tente novamente.");
+      await sendWhatsApp(supabase, senderPhone, dup ? "Este ponto já foi registrado há instantes." : "Erro ao registrar o ponto. Tente novamente.");
       return ok();
     }
 
@@ -234,8 +249,7 @@ serve(async (req: Request): Promise<Response> => {
       timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false,
     }).format(new Date(timestamp));
 
-    await sendWhatsApp(
-      senderPhone,
+    await sendWhatsApp(supabase, senderPhone,
       `✅ *${CLOCK_LABELS[type]}* registrada!\n\n📍 ${best.name}\n⏰ ${hora}\n📄 Comprovante NSR: ${nsr != null ? String(nsr).padStart(9, "0") : "-"}\n\n_PONTZAP_`
     );
     return ok();

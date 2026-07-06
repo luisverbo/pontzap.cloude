@@ -64,11 +64,23 @@ const formatPhoneNumber = (phone: string): string => {
   return digits;
 };
 
-const getEvolutionConfig = (): EvolutionConfig | null => {
+const getEvolutionConfig = async (supabase: any): Promise<EvolutionConfig | null> => {
+  // Prefer the config saved in the master panel; fall back to env secrets.
+  try {
+    const { data } = await supabase
+      .from("evolution_config")
+      .select("base_url, api_key, instance, is_active")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (data && data.base_url && data.api_key && data.instance) {
+      return { baseUrl: String(data.base_url).replace(/\/$/, ""), apiKey: data.api_key, instance: data.instance };
+    }
+  } catch (_e) { /* table may not exist yet */ }
+
   const baseUrl = Deno.env.get("EVOLUTION_API_URL");
   const apiKey = Deno.env.get("EVOLUTION_API_KEY");
   const instance = Deno.env.get("EVOLUTION_INSTANCE");
-
   if (baseUrl && apiKey && instance) {
     return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
   }
@@ -189,7 +201,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const evolutionConfig = getEvolutionConfig();
+    const evolutionConfig = await getEvolutionConfig(supabase);
     if (!evolutionConfig) {
       console.error("Evolution API credentials not configured (EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE)");
       return new Response(
