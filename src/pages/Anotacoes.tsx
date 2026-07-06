@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { useAuth } from '@/contexts/AuthContext';
 import { ptBR } from 'date-fns/locale';
 import { 
   Plus, 
@@ -115,6 +116,12 @@ const MESES = [
 ];
 
 export default function Anotacoes() {
+  const { companyStatus } = useAuth();
+  // Effective company for writes: the impersonated company (master support mode)
+  // or the admin's own company. Required so inserts satisfy the RLS company check.
+  const getEffectiveCompanyId = (): string | null =>
+    getImpersonatedCompanyId() || companyStatus?.id || null;
+
   const [folguistas, setFolguistas] = useState<Folguista[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [periodos, setPeriodos] = useState<Periodo[]>([]);
@@ -360,8 +367,6 @@ export default function Anotacoes() {
 
     setSaving(true);
     try {
-      const impersonatedCompanyId = getImpersonatedCompanyId();
-      
       const { error } = await supabase
         .from('anotacoes_periodo')
         .insert({
@@ -369,7 +374,7 @@ export default function Anotacoes() {
           periodo_mes: parseInt(periodoMes),
           periodo_ano: parseInt(periodoAno),
           observacao: periodoObs || null,
-          company_id: impersonatedCompanyId || null
+          company_id: getEffectiveCompanyId()
         });
 
       if (error) {
@@ -428,7 +433,8 @@ export default function Anotacoes() {
           local_id: selectedLocal || null,
           valor: parseFloat(valor),
           observacao: observacao || null,
-          status: 'a_pagar'
+          status: 'a_pagar',
+          company_id: getEffectiveCompanyId()
         });
 
       if (error) throw error;
