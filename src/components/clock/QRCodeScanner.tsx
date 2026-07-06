@@ -37,6 +37,8 @@ export function QRCodeScanner({
   const streamRef = useRef<MediaStream | null>(null);
   const photoResolveRef = useRef<((v: string | null) => void) | null>(null);
   const [capturingPhoto, setCapturingPhoto] = useState(false);
+  const [photoCameraReady, setPhotoCameraReady] = useState(false);
+  const [photoCameraError, setPhotoCameraError] = useState<string | null>(null);
 
   const stopPhotoStream = () => {
     if (streamRef.current) {
@@ -45,30 +47,48 @@ export function QRCodeScanner({
     }
   };
 
-  // Start an in-page front-camera preview and resolve with a compressed selfie
-  // when the user taps Capturar (or null if they skip / camera unavailable).
-  const startPhotoCapture = async (): Promise<string | null> => {
-    try {
-      await stopScanner(); // release the back camera first (one camera at a time on iOS)
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-      streamRef.current = stream;
-      setCapturingPhoto(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-      }, 50);
-      return await new Promise<string | null>((resolve) => {
-        photoResolveRef.current = resolve;
-      });
-    } catch {
-      // No camera / permission → proceed without a photo
-      stopPhotoStream();
-      setCapturingPhoto(false);
-      return null;
+  const openFrontCamera = async (): Promise<MediaStream> => {
+    // Retry a couple times: right after html5-qrcode releases the back camera,
+    // iOS may briefly report the camera as busy (NotReadableError).
+    let lastErr: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      } catch (e) {
+        lastErr = e;
+        await new Promise((r) => setTimeout(r, 500));
+      }
     }
+    throw lastErr;
   };
+
+  // Show an in-page front-camera preview; resolve with a compressed selfie when
+  // the user taps Capturar (or null if they skip). Mounts the overlay first so
+  // the <video> exists before we attach the stream.
+  const startPhotoCapture = (): Promise<string | null> =>
+    new Promise((resolve) => {
+      photoResolveRef.current = resolve;
+      setPhotoCameraError(null);
+      setPhotoCameraReady(false);
+      setCapturingPhoto(true);
+      (async () => {
+        try {
+          await stopScanner(); // release back camera first
+          await new Promise((r) => setTimeout(r, 400)); // let iOS free the camera
+          const stream = await openFrontCamera();
+          streamRef.current = stream;
+          const video = videoRef.current;
+          if (video) {
+            video.srcObject = stream;
+            await video.play().catch(() => {});
+          }
+          setPhotoCameraReady(true);
+        } catch (e) {
+          console.error('Selfie camera error:', e);
+          setPhotoCameraError('Não foi possível abrir a câmera. Você pode continuar sem a foto.');
+        }
+      })();
+    });
 
   const captureFrame = () => {
     const video = videoRef.current;
@@ -89,6 +109,7 @@ export function QRCodeScanner({
     }
     stopPhotoStream();
     setCapturingPhoto(false);
+    setPhotoCameraReady(false);
     resolve?.(dataUrl);
   };
 
@@ -97,6 +118,8 @@ export function QRCodeScanner({
     photoResolveRef.current = null;
     stopPhotoStream();
     setCapturingPhoto(false);
+    setPhotoCameraReady(false);
+    setPhotoCameraError(null);
     resolve?.(null);
   };
 
@@ -254,7 +277,7 @@ export function QRCodeScanner({
       {capturingPhoto && (
         <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-4">
           <p className="text-white text-sm mb-3">Confirme sua identidade — tire uma selfie</p>
-          <div className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900">
+          <div className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center">
             <video
               ref={videoRef}
               playsInline
@@ -263,12 +286,28 @@ export function QRCodeScanner({
               className="w-full h-full object-cover"
               style={{ transform: 'scaleX(-1)' }}
             />
+            {!photoCameraReady && !photoCameraError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80">
+                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                <span className="text-sm">Abrindo câmera...</span>
+              </div>
+            )}
+            {photoCameraError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                <Camera className="h-8 w-8 text-white/60 mb-2" />
+                <span className="text-sm text-white/80">{photoCameraError}</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 mt-5 w-full max-w-sm">
             <Button variant="outline" className="flex-1 h-12 bg-slate-800 border-slate-700 text-white hover:bg-slate-700" onClick={skipPhoto}>
-              Pular
+              {photoCameraError ? 'Continuar sem foto' : 'Pular'}
             </Button>
-            <Button className="flex-1 h-12 bg-success hover:bg-success/90 text-white" onClick={captureFrame}>
+            <Button
+              className="flex-1 h-12 bg-success hover:bg-success/90 text-white disabled:opacity-50"
+              onClick={captureFrame}
+              disabled={!photoCameraReady}
+            >
               <Camera className="h-5 w-5 mr-2" />
               Capturar
             </Button>

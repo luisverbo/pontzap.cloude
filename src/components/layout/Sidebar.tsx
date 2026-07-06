@@ -14,6 +14,7 @@ import {
   Calendar,
   CalendarCheck,
   CalendarDays,
+  Building2,
   Bell,
   FileText,
   FileSpreadsheet,
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Funcionários', href: '/employees', icon: <Users className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Locais de Trabalho', href: '/locations', icon: <MapPin className="h-4 w-4" />, roles: ['admin'] },
+      { label: 'Minha Empresa', href: '/minha-empresa', icon: <Building2 className="h-4 w-4" />, roles: ['admin'] },
     ],
   },
   {

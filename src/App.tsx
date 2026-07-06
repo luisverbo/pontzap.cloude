@@ -19,6 +19,7 @@ import NotificationRecipients from "./pages/NotificationRecipients";
 import FixedSchedules from "./pages/FixedSchedules";
 import PunctualSchedules from "./pages/PunctualSchedules";
 import Holidays from "./pages/Holidays";
+import CompanyProfile from "./pages/CompanyProfile";
 import LatenessResponse from "./pages/LatenessResponse";
 import FinancialManagement from "./pages/FinancialManagement";
 import MasterPanel from "./pages/MasterPanel";
@@ -142,6 +143,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Holidays />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/minha-empresa"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <CompanyProfile />
           </ProtectedRoute>
         }
       />

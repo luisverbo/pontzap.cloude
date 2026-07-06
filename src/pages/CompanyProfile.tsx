@@ -1,0 +1,169 @@
+import { useState, useEffect } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { Building2, Loader2, Save } from 'lucide-react';
+
+export default function CompanyProfile() {
+  const { companyStatus } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: '', cnpj: '', email: '', phone: '',
+    address: '', cep: '', city: '', state: '',
+  });
+
+  const resolveCompanyId = async (): Promise<string | null> => {
+    const imp = getImpersonatedCompanyId();
+    if (imp) return imp;
+    if (companyStatus?.id) return companyStatus.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: emp } = await supabase.from('employees').select('company_id').eq('user_id', user.id).maybeSingle();
+    if (emp?.company_id) return emp.company_id;
+    const { data: owned } = await supabase.from('companies').select('id').eq('admin_user_id', user.id).maybeSingle();
+    return owned?.id ?? null;
+  };
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const id = await resolveCompanyId();
+        if (!id) { setLoading(false); return; }
+        setCompanyId(id);
+        const { data } = await supabase
+          .from('companies')
+          .select('name, cnpj, email, phone, address, cep, city, state')
+          .eq('id', id)
+          .maybeSingle();
+        if (data) {
+          setForm({
+            name: (data as any).name || '',
+            cnpj: (data as any).cnpj || '',
+            email: (data as any).email || '',
+            phone: (data as any).phone || '',
+            address: (data as any).address || '',
+            cep: (data as any).cep || '',
+            city: (data as any).city || '',
+            state: (data as any).state || '',
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao carregar empresa:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
+    if (!companyId) { toast.error('Empresa não encontrada'); return; }
+    if (!form.name.trim()) { toast.error('Nome da empresa é obrigatório'); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          name: form.name.trim(),
+          cnpj: form.cnpj.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          address: form.address.trim() || null,
+          cep: form.cep.trim() || null,
+          city: form.city.trim() || null,
+          state: form.state.trim() || null,
+        })
+        .eq('id', companyId);
+      if (error) throw error;
+      toast.success('Dados da empresa salvos!');
+    } catch (e: any) {
+      console.error('Erro ao salvar empresa:', e);
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
+            <Building2 className="h-7 w-7 text-primary" />
+            Minha Empresa
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Estes dados aparecem como empregador no espelho de ponto
+          </p>
+        </div>
+
+        <Card className="card-modern">
+          <CardHeader>
+            <CardTitle>Dados da Empresa</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Razão Social / Nome *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome da empresa" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contato@empresa.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Endereço</Label>
+              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número, bairro" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>CEP</Label>
+                <Input value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} placeholder="00000-000" />
+              </div>
+              <div className="space-y-2">
+                <Label>Cidade</Label>
+                <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Cidade" />
+              </div>
+              <div className="space-y-2">
+                <Label>UF</Label>
+                <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="SP" maxLength={2} />
+              </div>
+            </div>
+            <Button className="w-full" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+}

@@ -54,6 +54,9 @@ interface CompanyData {
   name: string;
   cnpj?: string;
   address?: string;
+  cep?: string;
+  city?: string;
+  state?: string;
 }
 
 export default function EspelhoPonto() {
@@ -126,32 +129,44 @@ export default function EspelhoPonto() {
       if (impersonatedCompanyId) {
         const { data } = await supabase
           .from('companies')
-          .select('name')
+          .select('name, cnpj, address, cep, city, state')
           .eq('id', impersonatedCompanyId)
           .single();
-        
+
         if (data) {
-          setCompanyInfo({ name: data.name });
+          setCompanyInfo(data as CompanyData);
         }
       } else {
-        // Try to get company from current user's employee record
+        // Resolve the admin's company: employee link first, then the company
+        // they own via admin_user_id (admins often have no employees row).
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          let companyId: string | null = null;
           const { data: emp } = await supabase
             .from('employees')
             .select('company_id')
             .eq('user_id', user.id)
             .maybeSingle();
-          
-          if (emp?.company_id) {
+          companyId = emp?.company_id ?? null;
+
+          if (!companyId) {
+            const { data: owned } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('admin_user_id', user.id)
+              .maybeSingle();
+            companyId = owned?.id ?? null;
+          }
+
+          if (companyId) {
             const { data: company } = await supabase
               .from('companies')
-              .select('name')
-              .eq('id', emp.company_id)
+              .select('name, cnpj, address, cep, city, state')
+              .eq('id', companyId)
               .single();
-            
+
             if (company) {
-              setCompanyInfo({ name: company.name });
+              setCompanyInfo(company as CompanyData);
             }
           }
         }
@@ -370,7 +385,19 @@ export default function EspelhoPonto() {
       doc.text('EMPREGADOR:', 15, yPos);
       doc.setFont('helvetica', 'normal');
       doc.text(companyInfo?.name || 'Empresa não informada', 50, yPos);
-      
+      if (companyInfo?.cnpj) doc.text(`CNPJ: ${companyInfo.cnpj}`, 150, yPos);
+
+      const empBits: string[] = [];
+      if (companyInfo?.address) empBits.push(companyInfo.address);
+      if (companyInfo?.city) empBits.push(`${companyInfo.city}${companyInfo?.state ? '/' + companyInfo.state : ''}`);
+      if (companyInfo?.cep) empBits.push(`CEP: ${companyInfo.cep}`);
+      if (empBits.length > 0) {
+        yPos += 5;
+        doc.setFontSize(8);
+        doc.text(empBits.join(' - '), 50, yPos);
+        doc.setFontSize(10);
+      }
+
       yPos += 8;
       doc.setFont('helvetica', 'bold');
       doc.text('EMPREGADO:', 15, yPos);
