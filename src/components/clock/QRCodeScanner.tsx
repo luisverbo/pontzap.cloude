@@ -47,60 +47,53 @@ export function QRCodeScanner({
     }
   };
 
-  const openFrontCamera = async (): Promise<MediaStream> => {
-    // Retry a few times: right after html5-qrcode releases the back camera, iOS
-    // may briefly report the camera as busy (NotReadableError). Also fall back
-    // from a strict front-camera constraint to any camera.
-    const constraints: MediaStreamConstraints[] = [
-      { video: { facingMode: 'user' } },
-      { video: true },
-    ];
-    let lastErr: any = null;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const c = constraints[Math.min(attempt, constraints.length - 1)];
-      try {
-        return await navigator.mediaDevices.getUserMedia(c);
-      } catch (e) {
-        lastErr = e;
-        await new Promise((r) => setTimeout(r, 500));
+  const attachStream = (stream: MediaStream) => {
+    streamRef.current = stream;
+    const attach = () => {
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.play().catch(() => {});
+      } else {
+        setTimeout(attach, 60);
       }
-    }
-    throw lastErr;
+    };
+    attach();
   };
 
   // Show an in-page front-camera preview; resolve with a compressed selfie when
-  // the user taps Capturar (or null if they skip). Mounts the overlay first so
-  // the <video> exists before we attach the stream.
-  const startPhotoCapture = (): Promise<string | null> =>
-    new Promise((resolve) => {
+  // the user taps Capturar (or null if they skip). CRITICAL for iOS: getUserMedia
+  // is invoked SYNCHRONOUSLY here, directly in the button-tap gesture — any await
+  // before it loses the gesture and the camera never opens. The QR scanner camera
+  // is already stopped by the time these buttons are shown.
+  const startPhotoCapture = (): Promise<string | null> => {
+    setPhotoCameraError(null);
+    setPhotoCameraReady(false);
+    setCapturingPhoto(true);
+
+    let streamPromise: Promise<MediaStream>;
+    try {
+      streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    } catch (e) {
+      streamPromise = Promise.reject(e);
+    }
+
+    return new Promise((resolve) => {
       photoResolveRef.current = resolve;
-      setPhotoCameraError(null);
-      setPhotoCameraReady(false);
-      setCapturingPhoto(true);
-      (async () => {
-        try {
-          await stopScanner(); // release back camera first
-          await new Promise((r) => setTimeout(r, 400)); // let iOS free the camera
-          const stream = await openFrontCamera();
-          streamRef.current = stream;
-          // Attach as soon as the <video> is mounted (it is, since capturingPhoto
-          // was set before the awaits). Readiness is flagged by the onCanPlay event.
-          const attach = () => {
-            const video = videoRef.current;
-            if (video) {
-              video.srcObject = stream;
-              video.play().catch(() => {});
-            } else {
-              setTimeout(attach, 60);
-            }
-          };
-          attach();
-        } catch (e) {
-          console.error('Selfie camera error:', e);
-          setPhotoCameraError('Não foi possível abrir a câmera. Você pode continuar sem a foto.');
-        }
-      })();
+      streamPromise
+        .then((stream) => attachStream(stream))
+        .catch(async () => {
+          // Fallback: some iOS setups reject the facingMode constraint
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            attachStream(stream);
+          } catch (e2) {
+            console.error('Selfie camera error:', e2);
+            setPhotoCameraError('Não foi possível abrir a câmera. Verifique a permissão de câmera do navegador.');
+          }
+        });
     });
+  };
 
   const captureFrame = () => {
     const video = videoRef.current;
@@ -166,36 +159,16 @@ export function QRCodeScanner({
 
   const startScanner = async () => {
     setCameraError(null);
-    
-    // Check if camera permissions are available
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      // Stop the stream immediately - we just needed to check permission
-      stream.getTracks().forEach(track => track.stop());
-    } catch (err: any) {
-      console.error('Camera permission error:', err);
-      setHasPermission(false);
-      
-      if (err.name === 'NotAllowedError') {
-        setCameraError('Permissão de câmera negada. Verifique as configurações do navegador e permita o acesso à câmera.');
-      } else if (err.name === 'NotFoundError') {
-        setCameraError('Nenhuma câmera encontrada no dispositivo.');
-      } else {
-        setCameraError('Não foi possível acessar a câmera: ' + (err.message || 'Erro desconhecido'));
-      }
-      return;
-    }
 
     // Wait for container to be ready
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     if (!document.getElementById('qr-reader')) {
       console.log('QR reader container not ready');
       return;
     }
 
+    // Let html5-qrcode request the camera directly (single permission prompt).
     try {
       const html5QrCode = new Html5Qrcode('qr-reader');
       scannerRef.current = html5QrCode;
@@ -249,10 +222,9 @@ export function QRCodeScanner({
       onScan(location.id, location.name);
       toast.success(`Local identificado: ${location.name}`);
 
-      // If there's a default clock type and it's not disabled, auto-clock
-      if (defaultClockType && !disabledTypes.includes(defaultClockType)) {
-        handleClockIn(defaultClockType, location.id);
-      }
+      // Do NOT auto-clock: we always show the Entrada/Saída buttons so the punch
+      // (and the selfie capture) happens inside a real tap gesture — required for
+      // the camera to open on iOS.
     } catch (error) {
       console.error('Error validating QR code:', error);
       toast.error('Erro ao validar QR Code');
