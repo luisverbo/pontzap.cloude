@@ -159,6 +159,37 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // 5b. Enforce a logical punch order for the day (São Paulo local day):
+    //     entry → (lunch_out → lunch_in) → exit. You can't lunch/exit before entry.
+    {
+      const spDay = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit",
+      }).format(new Date(timestamp));
+      const { data: todays } = await supabase
+        .from("clock_records")
+        .select("type")
+        .eq("employee_id", employee.id)
+        .gte("timestamp", `${spDay}T00:00:00-03:00`)
+        .lte("timestamp", `${spDay}T23:59:59-03:00`);
+      const done = new Set((todays || []).map((r: { type: string }) => r.type));
+
+      const orderError = (msg: string) => json({ error: msg, orderError: true }, 422);
+
+      if (type === "entry" && done.has("entry")) return orderError("Você já registrou a Entrada hoje.");
+      if (type === "lunch_out") {
+        if (!done.has("entry")) return orderError("Registre a Entrada antes da Saída para Almoço.");
+        if (done.has("lunch_out")) return orderError("Você já registrou a Saída para Almoço hoje.");
+      }
+      if (type === "lunch_in") {
+        if (!done.has("lunch_out")) return orderError("Registre a Saída para Almoço antes do Retorno.");
+        if (done.has("lunch_in")) return orderError("Você já registrou o Retorno do Almoço hoje.");
+      }
+      if (type === "exit") {
+        if (!done.has("entry")) return orderError("Registre a Entrada antes da Saída.");
+        if (done.has("exit")) return orderError("Você já registrou a Saída hoje.");
+      }
+    }
+
     // 6. Insert the clock record
     const { data: record, error: insertError } = await supabase
       .from("clock_records")

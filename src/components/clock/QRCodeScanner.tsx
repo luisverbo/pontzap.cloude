@@ -48,12 +48,18 @@ export function QRCodeScanner({
   };
 
   const openFrontCamera = async (): Promise<MediaStream> => {
-    // Retry a couple times: right after html5-qrcode releases the back camera,
-    // iOS may briefly report the camera as busy (NotReadableError).
+    // Retry a few times: right after html5-qrcode releases the back camera, iOS
+    // may briefly report the camera as busy (NotReadableError). Also fall back
+    // from a strict front-camera constraint to any camera.
+    const constraints: MediaStreamConstraints[] = [
+      { video: { facingMode: 'user' } },
+      { video: true },
+    ];
     let lastErr: any = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const c = constraints[Math.min(attempt, constraints.length - 1)];
       try {
-        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        return await navigator.mediaDevices.getUserMedia(c);
       } catch (e) {
         lastErr = e;
         await new Promise((r) => setTimeout(r, 500));
@@ -77,12 +83,18 @@ export function QRCodeScanner({
           await new Promise((r) => setTimeout(r, 400)); // let iOS free the camera
           const stream = await openFrontCamera();
           streamRef.current = stream;
-          const video = videoRef.current;
-          if (video) {
-            video.srcObject = stream;
-            await video.play().catch(() => {});
-          }
-          setPhotoCameraReady(true);
+          // Attach as soon as the <video> is mounted (it is, since capturingPhoto
+          // was set before the awaits). Readiness is flagged by the onCanPlay event.
+          const attach = () => {
+            const video = videoRef.current;
+            if (video) {
+              video.srcObject = stream;
+              video.play().catch(() => {});
+            } else {
+              setTimeout(attach, 60);
+            }
+          };
+          attach();
         } catch (e) {
           console.error('Selfie camera error:', e);
           setPhotoCameraError('Não foi possível abrir a câmera. Você pode continuar sem a foto.');
@@ -283,6 +295,8 @@ export function QRCodeScanner({
               playsInline
               muted
               autoPlay
+              onCanPlay={() => setPhotoCameraReady(true)}
+              onLoadedMetadata={() => setPhotoCameraReady(true)}
               className="w-full h-full object-cover"
               style={{ transform: 'scaleX(-1)' }}
             />

@@ -181,9 +181,11 @@ const handler = async (req: Request): Promise<Response> => {
       timeZone: "America/Sao_Paulo",
     });
 
-    const { data: recipients, error: recipientsError } = await supabase
-      .from("notification_recipients")
-      .select("*");
+    // Only this company's recipients — never leak notifications across tenants
+    const companyId = clockRecord.employees.company_id;
+    let recipientsQuery = supabase.from("notification_recipients").select("*");
+    if (companyId) recipientsQuery = recipientsQuery.eq("company_id", companyId);
+    const { data: recipients, error: recipientsError } = await recipientsQuery;
 
     if (recipientsError) {
       console.error("Error fetching recipients:", recipientsError);
