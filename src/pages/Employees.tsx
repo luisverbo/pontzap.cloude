@@ -55,6 +55,12 @@ export default function Employees() {
     type: 'fixed' as 'fixed' | 'substitute',
     selectedLocations: [] as string[],
     primaryLocation: '',
+    cpf: '',
+    pis: '',
+    admission_date: '',
+    position: '',
+    department: '',
+    valor_diaria: null as number | null,
   });
 
   const [editForm, setEditForm] = useState({
@@ -246,6 +252,12 @@ export default function Employees() {
           // Quando estiver em Modo Suporte (MASTER), garantimos que o backend saiba
           // em qual empresa o funcionário deve ser criado.
           companyId: impersonatedCompanyId || undefined,
+          cpf: createForm.cpf.trim() || undefined,
+          pis: createForm.pis.trim() || undefined,
+          admissionDate: createForm.admission_date || undefined,
+          position: createForm.position.trim() || undefined,
+          department: createForm.department.trim() || undefined,
+          valorDiaria: createForm.type === 'substitute' ? createForm.valor_diaria : undefined,
         },
       });
 
@@ -267,6 +279,12 @@ export default function Employees() {
         type: 'fixed',
         selectedLocations: [],
         primaryLocation: '',
+        cpf: '',
+        pis: '',
+        admission_date: '',
+        position: '',
+        department: '',
+        valor_diaria: null,
       });
       refetch();
     } catch (error: any) {
@@ -800,6 +818,71 @@ export default function Employees() {
                     <SelectItem value="substitute">Folguista</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {createForm.type === 'substitute' && (
+                <div className="space-y-2">
+                  <Label>Valor por Dia (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 150.00"
+                    value={createForm.valor_diaria ?? ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, valor_diaria: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Lançado automaticamente como diária quando o folguista bate entrada.
+                  </p>
+                </div>
+              )}
+
+              {/* Dados legais (Portaria 671 / espelho de ponto) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={createForm.cpf}
+                    onChange={(e) => setCreateForm({ ...createForm, cpf: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>PIS</Label>
+                  <Input
+                    placeholder="000.00000.00-0"
+                    value={createForm.pis}
+                    onChange={(e) => setCreateForm({ ...createForm, pis: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Data de Admissão</Label>
+                <Input
+                  type="date"
+                  value={createForm.admission_date}
+                  onChange={(e) => setCreateForm({ ...createForm, admission_date: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Cargo</Label>
+                  <Input
+                    placeholder="Ex: Porteiro"
+                    value={createForm.position}
+                    onChange={(e) => setCreateForm({ ...createForm, position: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Setor</Label>
+                  <Input
+                    placeholder="Ex: Portaria"
+                    value={createForm.department}
+                    onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

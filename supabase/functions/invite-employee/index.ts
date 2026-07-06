@@ -16,6 +16,13 @@ interface InviteEmployeeRequest {
   primaryLocationId?: string;
   // Usado quando o solicitante é MASTER (modo suporte) para criar na empresa correta.
   companyId?: string;
+  // Dados legais (Portaria 671)
+  cpf?: string;
+  pis?: string;
+  admissionDate?: string;
+  position?: string;
+  department?: string;
+  valorDiaria?: number | null;
 }
 
 // Empresa interna usada para contas MASTER quando não estiverem em Modo Suporte.
@@ -63,6 +70,12 @@ serve(async (req: Request): Promise<Response> => {
       locationIds,
       primaryLocationId,
       companyId,
+      cpf,
+      pis,
+      admissionDate,
+      position,
+      department,
+      valorDiaria,
     }: InviteEmployeeRequest = await req.json();
 
     // Verificar se é MASTER
@@ -228,6 +241,26 @@ serve(async (req: Request): Promise<Response> => {
     if (employeeError) {
       console.error("Error creating employee:", employeeError);
       throw new Error(`Erro ao criar funcionário: ${employeeError.message}`);
+    }
+
+    // Best-effort: store legal/compliance fields. Wrapped so a not-yet-applied
+    // migration can never break employee creation.
+    if (cpf || pis || admissionDate || position || department || valorDiaria != null) {
+      try {
+        await supabaseAdmin
+          .from("employees")
+          .update({
+            cpf: cpf || null,
+            pis: pis || null,
+            admission_date: admissionDate || null,
+            position: position || null,
+            department: department || null,
+            valor_diaria: valorDiaria ?? null,
+          })
+          .eq("id", employeeData.id);
+      } catch (e) {
+        console.error("Could not save legal fields (migration applied?):", e);
+      }
     }
 
     console.log(`Employee record created: ${employeeData.id} with company_id: ${resolvedCompanyId}`);
