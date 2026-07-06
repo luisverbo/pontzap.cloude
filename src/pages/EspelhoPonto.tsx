@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import { FileText, Download, Loader2, Calendar, User, Building2 } from 'lucide-react';
+import { FileText, Download, Loader2, Calendar, User, Building2, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, isWeekend } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
@@ -67,6 +67,7 @@ export default function EspelhoPonto() {
   const [companyInfo, setCompanyInfo] = useState<CompanyData | null>(null);
   const [totalWorkedHours, setTotalWorkedHours] = useState(0);
   const [totalOvertimeMinutes, setTotalOvertimeMinutes] = useState(0);
+  const [signedAt, setSignedAt] = useState<string | null>(null);
 
   // Fetch employees on mount
   useEffect(() => {
@@ -185,6 +186,16 @@ export default function EspelhoPonto() {
       if (emp) {
         setEmployeeInfo(emp);
       }
+
+      // Digital signature status for this employee/month
+      const { data: sig } = await supabase
+        .from('espelho_signatures')
+        .select('signed_at')
+        .eq('employee_id', selectedEmployee)
+        .eq('ano', year)
+        .eq('mes', month)
+        .maybeSingle();
+      setSignedAt((sig as any)?.signed_at ?? null);
 
       // Get employee work schedule
       const { data: empData } = await supabase
@@ -464,7 +475,15 @@ export default function EspelhoPonto() {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       
-      // Left signature
+      // Left signature — show electronic signature if the employee signed
+      if (signedAt) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('ASSINADO ELETRONICAMENTE', 75, yPos - 2, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.text(`por ${employeeInfo.name} em ${format(new Date(signedAt), 'dd/MM/yyyy HH:mm')}`, 75, yPos + 2, { align: 'center' });
+        doc.setFontSize(8);
+      }
       doc.line(30, yPos, 120, yPos);
       doc.text('Assinatura do Empregado', 55, yPos + 5);
       
@@ -633,6 +652,16 @@ export default function EspelhoPonto() {
                   </span>
                 </div>
               </CardTitle>
+              {signedAt ? (
+                <p className="text-xs text-success flex items-center gap-1.5 mt-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Assinado eletronicamente pelo funcionário em {format(new Date(signedAt), 'dd/MM/yyyy HH:mm')}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Aguardando assinatura do funcionário
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">

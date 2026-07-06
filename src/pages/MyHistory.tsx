@@ -19,7 +19,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Clock, MapPin, Loader2, Calendar, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, HandMetal } from 'lucide-react';
+import { Clock, MapPin, Loader2, Calendar, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, HandMetal, PenLine } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
@@ -37,6 +37,7 @@ interface EmployeeData {
   work_start_time: string | null;
   work_end_time: string | null;
   lunch_duration_minutes: number | null;
+  company_id: string | null;
 }
 
 interface DayGroup {
@@ -66,6 +67,52 @@ export default function MyHistory() {
   const [punctualScheduleByDate, setPunctualScheduleByDate] = useState<
     Record<string, { startMinutes: number; toleranceMinutes: number }>
   >({});
+
+  // Espelho signature for the month currently in view
+  const [signedAt, setSignedAt] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
+
+  const viewMonth = new Date().getMonth() + 1;
+  const viewYear = new Date().getFullYear();
+
+  const fetchSignature = async (employeeId: string) => {
+    const { data } = await supabase
+      .from('espelho_signatures')
+      .select('signed_at')
+      .eq('employee_id', employeeId)
+      .eq('ano', viewYear)
+      .eq('mes', viewMonth)
+      .maybeSingle();
+    setSignedAt((data as any)?.signed_at ?? null);
+  };
+
+  const handleSignEspelho = async () => {
+    if (!employeeData) return;
+    setSigning(true);
+    try {
+      const { error } = await supabase.from('espelho_signatures').insert({
+        employee_id: employeeData.id,
+        company_id: employeeData.company_id,
+        ano: viewYear,
+        mes: viewMonth,
+      });
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Este mês já foi assinado');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Espelho assinado com sucesso!');
+        fetchSignature(employeeData.id);
+      }
+    } catch (e: any) {
+      console.error('Erro ao assinar espelho:', e);
+      toast.error(`Erro ao assinar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setSigning(false);
+    }
+  };
 
   const parseTimeToMinutes = (time: string) => {
     const [h, m] = time.split(':').map(Number);
@@ -98,7 +145,7 @@ export default function MyHistory() {
         // Fetch employee data
         const { data: empData, error: empError } = await supabase
           .from('employees')
-          .select('id, work_start_time, work_end_time, lunch_duration_minutes')
+          .select('id, work_start_time, work_end_time, lunch_duration_minutes, company_id')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -109,6 +156,7 @@ export default function MyHistory() {
         }
 
         setEmployeeData(empData);
+        fetchSignature(empData.id);
 
         // Fetch locations
         const { data: locData, error: locError } = await supabase
@@ -429,6 +477,45 @@ export default function MyHistory() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Assinatura do espelho do mês */}
+        {filterPeriod === 'month' && (
+          <Card>
+            <CardContent className="p-4">
+              {signedAt ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Espelho de {format(new Date(viewYear, viewMonth - 1), 'MMMM/yyyy', { locale: ptBR })} assinado</p>
+                    <p className="text-sm text-muted-foreground">
+                      Assinado eletronicamente em {format(new Date(signedAt), "dd/MM/yyyy 'às' HH:mm")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <PenLine className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Assinar espelho de {format(new Date(viewYear, viewMonth - 1), 'MMMM/yyyy', { locale: ptBR })}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Confirme que seus registros do mês estão corretos.
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={handleSignEspelho} disabled={signing} className="shrink-0">
+                    {signing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
+                    Assinar
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Records grouped by day */}
         <div className="space-y-3">
