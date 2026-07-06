@@ -22,4 +22,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-company-admin]
-verify_jwt = false
+verify_jwt = true

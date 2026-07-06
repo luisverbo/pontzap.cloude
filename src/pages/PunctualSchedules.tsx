@@ -31,6 +31,7 @@ import {
   CalendarRange,
   RefreshCw,
 } from 'lucide-react';
+import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -124,12 +125,20 @@ export default function PunctualSchedules() {
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      // Fetch employees (only substitute type)
-      const { data: employeesData, error: employeesError } = await supabase
+      const impersonatedCompanyId = getImpersonatedCompanyId();
+
+      // Fetch employees (only substitute type), scoped to the company
+      let employeesQuery = supabase
         .from('employees')
         .select('id, user_id, type, is_active')
         .eq('type', 'substitute')
         .eq('is_active', true);
+
+      if (impersonatedCompanyId) {
+        employeesQuery = employeesQuery.eq('company_id', impersonatedCompanyId);
+      }
+
+      const { data: employeesData, error: employeesError } = await employeesQuery;
 
       if (employeesError) throw employeesError;
 
@@ -155,21 +164,34 @@ export default function PunctualSchedules() {
         profiles: profilesMap[emp.user_id],
       }));
 
-      // Fetch locations
-      const { data: locationsData, error: locationsError } = await supabase
+      // Fetch locations, scoped to the company
+      let locationsQuery = supabase
         .from('locations')
         .select('id, name')
         .order('name');
 
+      if (impersonatedCompanyId) {
+        locationsQuery = locationsQuery.eq('company_id', impersonatedCompanyId);
+      }
+
+      const { data: locationsData, error: locationsError } = await locationsQuery;
+
       if (locationsError) throw locationsError;
 
-      // Fetch punctual schedules
-      const { data: schedulesData, error: schedulesError } = await supabase
-        .from('punctual_schedules')
-        .select('*')
-        .order('date', { ascending: true });
+      // Fetch punctual schedules only for this company's employees
+      const companyEmployeeIds = (employeesData || []).map((e) => e.id);
+      let schedulesData: any[] = [];
 
-      if (schedulesError) throw schedulesError;
+      if (companyEmployeeIds.length > 0) {
+        const { data, error: schedulesError } = await supabase
+          .from('punctual_schedules')
+          .select('*')
+          .in('employee_id', companyEmployeeIds)
+          .order('date', { ascending: true });
+
+        if (schedulesError) throw schedulesError;
+        schedulesData = data || [];
+      }
 
       // Fetch employee profiles for schedules
       const scheduleEmployeeIds = [...new Set((schedulesData || []).map((s) => s.employee_id))];

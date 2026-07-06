@@ -35,6 +35,37 @@ const handler = async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    // This function creates an admin for ANY company, so it must be locked to MASTER users only.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: requestingUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !requestingUser) {
+      return new Response(
+        JSON.stringify({ error: "Token inválido" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: masterData } = await supabaseAdmin
+      .from("master_users")
+      .select("id")
+      .eq("user_id", requestingUser.id)
+      .maybeSingle();
+
+    if (!masterData) {
+      return new Response(
+        JSON.stringify({ error: "Apenas usuários master podem criar administradores de empresa" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { companyId, companyName, email, phone }: CreateCompanyAdminRequest = await req.json();
 
     if (!companyId || !companyName || !email) {

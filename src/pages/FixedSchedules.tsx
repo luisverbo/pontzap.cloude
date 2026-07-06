@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Calendar, Search, Save, Users, MapPin, Clock, Plus } from 'lucide-react';
 import { DAYS_OF_WEEK } from '@/types';
+import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 
 interface Employee {
   id: string;
@@ -104,12 +105,20 @@ export default function FixedSchedules() {
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      // Fetch employees (only fixed type)
-      const { data: employeesData, error: employeesError } = await supabase
+      const impersonatedCompanyId = getImpersonatedCompanyId();
+
+      // Fetch employees (only fixed type), scoped to the company
+      let employeesQuery = supabase
         .from('employees')
         .select('id, user_id, type, is_active')
         .eq('type', 'fixed')
         .eq('is_active', true);
+
+      if (impersonatedCompanyId) {
+        employeesQuery = employeesQuery.eq('company_id', impersonatedCompanyId);
+      }
+
+      const { data: employeesData, error: employeesError } = await employeesQuery;
 
       if (employeesError) throw employeesError;
 
@@ -135,24 +144,37 @@ export default function FixedSchedules() {
         profiles: profilesMap[emp.user_id],
       }));
 
-      // Fetch locations
-      const { data: locationsData, error: locationsError } = await supabase
+      // Fetch locations, scoped to the company
+      let locationsQuery = supabase
         .from('locations')
         .select('id, name')
         .order('name');
 
+      if (impersonatedCompanyId) {
+        locationsQuery = locationsQuery.eq('company_id', impersonatedCompanyId);
+      }
+
+      const { data: locationsData, error: locationsError } = await locationsQuery;
+
       if (locationsError) throw locationsError;
 
-      // Fetch all fixed schedules
-      const { data: schedulesData, error: schedulesError } = await supabase
-        .from('fixed_schedules')
-        .select('*');
+      // Fetch fixed schedules only for this company's employees
+      const employeeIds = (employeesData || []).map((e) => e.id);
+      let schedulesData: any[] = [];
 
-      if (schedulesError) throw schedulesError;
+      if (employeeIds.length > 0) {
+        const { data, error: schedulesError } = await supabase
+          .from('fixed_schedules')
+          .select('*')
+          .in('employee_id', employeeIds);
+
+        if (schedulesError) throw schedulesError;
+        schedulesData = data || [];
+      }
 
       setEmployees(employeesWithProfiles as Employee[]);
       setLocations(locationsData || []);
-      setSchedules(schedulesData || []);
+      setSchedules(schedulesData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');

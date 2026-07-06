@@ -122,6 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Not a master user: never allow a stale impersonation to scope their data
+      localStorage.removeItem('impersonating_company');
+
       // Get employee's company
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
@@ -215,6 +218,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Clear any active support-mode impersonation so it cannot bleed into the next session
+    localStorage.removeItem('impersonating_company');
     setUser(null);
     setSession(null);
     setProfile(null);
