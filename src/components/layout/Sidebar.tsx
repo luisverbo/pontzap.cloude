@@ -13,6 +13,7 @@ import {
   MapPin,
   Calendar,
   CalendarCheck,
+  CalendarDays,
   Bell,
   FileText,
   FileSpreadsheet,
@@ -71,6 +72,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Escala Fixa', href: '/fixed-schedules', icon: <Calendar className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Escalas Pontuais', href: '/punctual-schedules', icon: <CalendarCheck className="h-4 w-4" />, roles: ['admin'] },
+      { label: 'Feriados', href: '/feriados', icon: <CalendarDays className="h-4 w-4" />, roles: ['admin'] },
     ],
   },
   {

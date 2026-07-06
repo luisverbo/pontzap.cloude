@@ -223,9 +223,18 @@ export default function EspelhoPonto() {
         recordsByDay[day].push(record);
       });
 
+      // Fetch holidays in the month (mark them on the espelho)
+      const holidayMap: Record<string, string> = {};
+      const { data: holidayRows } = await supabase
+        .from('holidays')
+        .select('date, name')
+        .gte('date', format(startDate, 'yyyy-MM-dd'))
+        .lte('date', format(endDate, 'yyyy-MM-dd'));
+      (holidayRows || []).forEach((h: any) => { holidayMap[h.date] = h.name; });
+
       // Generate all days of the month
       const days = eachDayOfInterval({ start: startDate, end: endDate });
-      
+
       let totalWorked = 0;
       let totalOvertime = 0;
       
@@ -278,6 +287,12 @@ export default function EspelhoPonto() {
           observations = 'Registro incompleto';
         }
         
+        // Holiday marking takes precedence in the observation
+        if (holidayMap[dateStr]) {
+          const feriado = `Feriado: ${holidayMap[dateStr]}`;
+          observations = dayRecords.length > 0 ? `${feriado} | Trabalhado` : feriado;
+        }
+
         // Check for manual records
         const hasManual = dayRecords.some(r => r.is_manual);
         if (hasManual) {

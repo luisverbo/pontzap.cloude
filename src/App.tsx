@@ -18,6 +18,7 @@ import EspelhoPonto from "./pages/EspelhoPonto";
 import NotificationRecipients from "./pages/NotificationRecipients";
 import FixedSchedules from "./pages/FixedSchedules";
 import PunctualSchedules from "./pages/PunctualSchedules";
+import Holidays from "./pages/Holidays";
 import LatenessResponse from "./pages/LatenessResponse";
 import FinancialManagement from "./pages/FinancialManagement";
 import MasterPanel from "./pages/MasterPanel";
@@ -132,6 +133,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <NotificationRecipients />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/feriados"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Holidays />
           </ProtectedRoute>
         }
       />
