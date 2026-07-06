@@ -151,7 +151,7 @@ serve(async (req: Request): Promise<Response> => {
         longitude: longitude ?? null,
         timestamp,
       })
-      .select("id, nsr, record_hash")
+      .select("id")
       .single();
 
     if (insertError) {
@@ -247,14 +247,30 @@ serve(async (req: Request): Promise<Response> => {
       } // end if (valorDiaria > 0)
     }
 
+    // Read the receipt fields defensively — the NSR/hash migration may not be
+    // applied yet, in which case the punch still succeeds without a receipt.
+    let nsr: number | null = null;
+    let recordHash: string | null = null;
+    try {
+      const { data: r } = await supabase
+        .from("clock_records")
+        .select("nsr, record_hash")
+        .eq("id", record.id)
+        .maybeSingle();
+      nsr = (r as { nsr?: number | null } | null)?.nsr ?? null;
+      recordHash = (r as { record_hash?: string | null } | null)?.record_hash ?? null;
+    } catch (_e) {
+      // columns not present yet — ignore
+    }
+
     return json({
       success: true,
       recordId: record.id,
       anotacaoCreated,
-      // Comprovante de ponto (Portaria 671)
+      // Comprovante de ponto (Portaria 671) — null until the migration is applied
       receipt: {
-        nsr: (record as { nsr?: number | null }).nsr ?? null,
-        hash: (record as { record_hash?: string | null }).record_hash ?? null,
+        nsr,
+        hash: recordHash,
         timestamp,
         type,
         locationName: location.name,
