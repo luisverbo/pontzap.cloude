@@ -61,6 +61,11 @@ export default function Employees() {
     type: 'fixed' as 'fixed' | 'substitute',
     is_active: true,
     valor_diaria: null as number | null,
+    cpf: '',
+    pis: '',
+    admission_date: '',
+    position: '',
+    department: '',
   });
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -94,6 +99,11 @@ export default function Employees() {
       type: employee.type,
       is_active: employee.is_active,
       valor_diaria: (employee as any).valor_diaria ?? null,
+      cpf: (employee as any).cpf ?? '',
+      pis: (employee as any).pis ?? '',
+      admission_date: (employee as any).admission_date ?? '',
+      position: (employee as any).position ?? '',
+      department: (employee as any).department ?? '',
     });
     setEditDialogOpen(true);
   };
@@ -146,7 +156,18 @@ export default function Employees() {
     if (!selectedEmployee) return;
     setSaving(true);
     try {
-      await updateEmployee(selectedEmployee.id, editForm);
+      // Empty strings must become null (admission_date is a DATE column)
+      const payload: any = {
+        type: editForm.type,
+        is_active: editForm.is_active,
+        valor_diaria: editForm.valor_diaria,
+        cpf: editForm.cpf || null,
+        pis: editForm.pis || null,
+        admission_date: editForm.admission_date || null,
+        position: editForm.position || null,
+        department: editForm.department || null,
+      };
+      await updateEmployee(selectedEmployee.id, payload);
       setEditDialogOpen(false);
       setSelectedEmployee(null);
     } finally {
@@ -479,6 +500,52 @@ export default function Employees() {
                   </p>
                 </div>
               )}
+
+              {/* Dados legais (Portaria 671 / espelho de ponto) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={editForm.cpf}
+                    onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>PIS</Label>
+                  <Input
+                    placeholder="000.00000.00-0"
+                    value={editForm.pis}
+                    onChange={(e) => setEditForm({ ...editForm, pis: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Data de Admissão</Label>
+                <Input
+                  type="date"
+                  value={editForm.admission_date}
+                  onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Cargo</Label>
+                  <Input
+                    placeholder="Ex: Porteiro"
+                    value={editForm.position}
+                    onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Setor</Label>
+                  <Input
+                    placeholder="Ex: Portaria"
+                    value={editForm.department}
+                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                  />
+                </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_active"

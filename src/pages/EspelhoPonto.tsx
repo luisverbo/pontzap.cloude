@@ -80,7 +80,7 @@ export default function EspelhoPonto() {
       
       let query = supabase
         .from('employees')
-        .select('id, user_id, company_id')
+        .select('id, user_id, company_id, pis, cpf, admission_date, position, department')
         .eq('is_active', true);
       
       if (impersonatedCompanyId) {
@@ -97,12 +97,17 @@ export default function EspelhoPonto() {
         .select('id, name, email')
         .in('id', userIds.length > 0 ? userIds : ['']);
 
-      const mappedEmployees: EmployeeData[] = (employeesData || []).map(emp => {
+      const mappedEmployees: EmployeeData[] = (employeesData || []).map((emp: any) => {
         const profile = (profiles || []).find(p => p.id === emp.user_id);
         return {
           id: emp.id,
           name: profile?.name || 'Sem nome',
           email: profile?.email || '',
+          pis: emp.pis || undefined,
+          cpf: emp.cpf || undefined,
+          admission_date: emp.admission_date || undefined,
+          position: emp.position || undefined,
+          department: emp.department || undefined,
         };
       });
 
@@ -345,8 +350,23 @@ export default function EspelhoPonto() {
       doc.text('EMPREGADO:', 15, yPos);
       doc.setFont('helvetica', 'normal');
       doc.text(employeeInfo.name, 50, yPos);
-      doc.text(`Email: ${employeeInfo.email}`, 150, yPos);
-      
+      if (employeeInfo.cpf) doc.text(`CPF: ${employeeInfo.cpf}`, 150, yPos);
+
+      // Second identification line — legal fields required by Portaria 671
+      const idBits: string[] = [];
+      if (employeeInfo.pis) idBits.push(`PIS: ${employeeInfo.pis}`);
+      if (employeeInfo.position) idBits.push(`Cargo: ${employeeInfo.position}`);
+      if (employeeInfo.department) idBits.push(`Setor: ${employeeInfo.department}`);
+      if (employeeInfo.admission_date) {
+        idBits.push(`Admissão: ${format(new Date(employeeInfo.admission_date + 'T12:00:00'), 'dd/MM/yyyy')}`);
+      }
+      if (idBits.length > 0) {
+        yPos += 6;
+        doc.setFontSize(9);
+        doc.text(idBits.join('   |   '), 50, yPos);
+        doc.setFontSize(10);
+      }
+
       yPos += 12;
 
       // Table Header
