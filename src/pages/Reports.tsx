@@ -24,6 +24,14 @@ import { ptBR } from 'date-fns/locale';
 import { CLOCK_TYPE_LABELS, ClockType } from '@/types';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 
+// São Paulo local calendar day for a timestamptz, so evening punches don't
+// get bucketed onto the next (UTC) day.
+const spDayKey = (iso: string): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(iso));
+
 interface EmployeeOvertime {
   employeeId: string;
   name: string;
@@ -109,8 +117,8 @@ export default function Reports() {
               schedule_type
             )
           `)
-          .gte('timestamp', `${startDate}T00:00:00`)
-          .lte('timestamp', `${endDate}T23:59:59`)
+          .gte('timestamp', `${startDate}T00:00:00-03:00`)
+          .lte('timestamp', `${endDate}T23:59:59-03:00`)
           .in('employee_id', employeeIds)
           .order('timestamp', { ascending: true });
 
@@ -198,7 +206,7 @@ export default function Reports() {
         byType[record.type as ClockType]++;
         
         const empId = record.employee_id;
-        const day = record.timestamp.split('T')[0];
+        const day = spDayKey(record.timestamp);
         
         if (!recordsByEmployeeDay[empId]) {
           recordsByEmployeeDay[empId] = {};

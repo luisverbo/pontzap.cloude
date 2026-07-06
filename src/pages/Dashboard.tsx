@@ -145,11 +145,22 @@ export default function Dashboard() {
           location_name: locationMap[record.location_id] || 'Local',
         }));
 
-        // Calculate on-time and pending counts
-        // Only count employees as pending if their scheduled start time has passed
-        const employeesWithEntry = new Set(
-          clockRecords?.filter(r => r.type === 'entry').map(r => r.employee_id) || []
-        );
+        // Calculate on-time and pending counts.
+        // IMPORTANT: use a dedicated unlimited query for today's ENTRY records —
+        // the `clockRecords` list above is capped at 10 (for the recent feed) and
+        // would badly undercount punctuality once a company has >10 punches/day.
+        let entryEmployeeIds: string[] = [];
+        if (companyEmployeeIds.length > 0) {
+          const { data: entriesToday } = await supabase
+            .from('clock_records')
+            .select('employee_id')
+            .eq('type', 'entry')
+            .gte('timestamp', startOfToday)
+            .lte('timestamp', endOfToday)
+            .in('employee_id', companyEmployeeIds);
+          entryEmployeeIds = (entriesToday || []).map(r => r.employee_id);
+        }
+        const employeesWithEntry = new Set(entryEmployeeIds);
 
         // Get current time in minutes
         const now = new Date();

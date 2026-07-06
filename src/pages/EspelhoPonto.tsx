@@ -12,6 +12,21 @@ import { format, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, isWeeken
 import { ptBR } from 'date-fns/locale';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 
+// São Paulo local calendar day (YYYY-MM-DD) for a timestamptz. Using the raw
+// UTC date would push evening punches (21h–23h59) onto the next day.
+const spDayKey = (iso: string): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(iso));
+
+// São Paulo local HH:mm for a timestamptz, independent of the browser timezone.
+const spTime = (iso: string): string =>
+  new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
+
 interface DailyRecord {
   date: string;
   dayOfWeek: string;
@@ -187,7 +202,7 @@ export default function EspelhoPonto() {
       // Group records by day
       const recordsByDay: Record<string, typeof clockRecords> = {};
       (clockRecords || []).forEach(record => {
-        const day = record.timestamp.split('T')[0];
+        const day = spDayKey(record.timestamp);
         if (!recordsByDay[day]) recordsByDay[day] = [];
         recordsByDay[day].push(record);
       });
@@ -256,10 +271,10 @@ export default function EspelhoPonto() {
         return {
           date: format(day, 'dd/MM/yyyy'),
           dayOfWeek: format(day, 'EEEE', { locale: ptBR }),
-          entry: entry ? format(new Date(entry.timestamp), 'HH:mm') : null,
-          lunchOut: lunchOut ? format(new Date(lunchOut.timestamp), 'HH:mm') : null,
-          lunchIn: lunchIn ? format(new Date(lunchIn.timestamp), 'HH:mm') : null,
-          exit: exit ? format(new Date(exit.timestamp), 'HH:mm') : null,
+          entry: entry ? spTime(entry.timestamp) : null,
+          lunchOut: lunchOut ? spTime(lunchOut.timestamp) : null,
+          lunchIn: lunchIn ? spTime(lunchIn.timestamp) : null,
+          exit: exit ? spTime(exit.timestamp) : null,
           totalWorked: workedMinutes > 0 ? formatMinutes(workedMinutes) : '-',
           overtime: overtimeMinutes > 0 ? formatMinutes(overtimeMinutes) : '-',
           observations,
