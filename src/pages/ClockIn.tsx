@@ -22,7 +22,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
-import { useClockRecords } from '@/hooks/useClockRecords';
+import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
+import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -88,7 +89,8 @@ export default function ClockIn() {
   const [loadingEmployee, setLoadingEmployee] = useState(true);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [pendingClockType, setPendingClockType] = useState<ClockType | null>(null);
-  
+  const [receipt, setReceipt] = useState<ClockReceipt | null>(null);
+
   // Password change dialog state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -332,6 +334,7 @@ export default function ClockIn() {
         updatePendingCount();
       } else {
         sendWhatsAppNotification(result.recordId, type, 'gps');
+        if (result.receipt) setReceipt(result.receipt);
       }
       await refetch();
     }
@@ -362,6 +365,7 @@ export default function ClockIn() {
         updatePendingCount();
       } else {
         sendWhatsAppNotification(result.recordId, type, 'gps');
+        if (result.receipt) setReceipt(result.receipt);
       }
       // The folguista payment record is created server-side on entry.
       await refetch();
@@ -384,6 +388,7 @@ export default function ClockIn() {
 
     if (result.success && result.recordId) {
       sendWhatsAppNotification(result.recordId, type, 'qr');
+      if (result.receipt) setReceipt(result.receipt);
       // The folguista payment record is created server-side on entry.
       await refetch();
     }
@@ -675,6 +680,13 @@ export default function ClockIn() {
             hasLocation={!!location}
           />
         )}
+
+        {/* Comprovante de Ponto (Portaria 671) */}
+        <ClockReceiptDialog
+          receipt={receipt}
+          employeeName={profile?.name || 'Funcionário'}
+          onClose={() => setReceipt(null)}
+        />
 
         {/* Password Change Dialog */}
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>

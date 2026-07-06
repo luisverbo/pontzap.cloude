@@ -151,7 +151,7 @@ serve(async (req: Request): Promise<Response> => {
         longitude: longitude ?? null,
         timestamp,
       })
-      .select("id")
+      .select("id, nsr, record_hash")
       .single();
 
     if (insertError) {
@@ -247,7 +247,19 @@ serve(async (req: Request): Promise<Response> => {
       } // end if (valorDiaria > 0)
     }
 
-    return json({ success: true, recordId: record.id, anotacaoCreated });
+    return json({
+      success: true,
+      recordId: record.id,
+      anotacaoCreated,
+      // Comprovante de ponto (Portaria 671)
+      receipt: {
+        nsr: (record as { nsr?: number | null }).nsr ?? null,
+        hash: (record as { record_hash?: string | null }).record_hash ?? null,
+        timestamp,
+        type,
+        locationName: location.name,
+      },
+    });
   } catch (error: unknown) {
     console.error("register-clock error:", error);
     return json({ error: (error as Error).message || "Erro interno" }, 500);

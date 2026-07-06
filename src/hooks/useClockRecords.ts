@@ -11,6 +11,14 @@ export interface ClockRecordWithDetails extends ClockRecord {
   location?: Tables<'locations'>;
 }
 
+export interface ClockReceipt {
+  nsr: number | null;
+  hash: string | null;
+  timestamp: string;
+  type: ClockType;
+  locationName: string;
+}
+
 interface LocationWithRadius {
   id: string;
   name: string;
@@ -121,7 +129,7 @@ export function useClockRecords(employeeId?: string) {
     method: 'gps' | 'qr',
     latitude?: number,
     longitude?: number
-  ): Promise<{ success: boolean; outsideRadius?: boolean; distance?: number; recordId?: string; offline?: boolean }> => {
+  ): Promise<{ success: boolean; outsideRadius?: boolean; distance?: number; recordId?: string; offline?: boolean; receipt?: ClockReceipt }> => {
     if (!employeeId) {
       toast.error('Funcionário não identificado');
       return { success: false };
@@ -203,7 +211,7 @@ export function useClockRecords(employeeId?: string) {
 
       await fetchRecords();
       toast.success('Ponto registrado com sucesso!');
-      return { success: true, recordId: data.recordId };
+      return { success: true, recordId: data.recordId, receipt: data.receipt };
     } catch (error: any) {
       console.error('Error clocking in:', error);
 
