@@ -61,13 +61,31 @@ serve(async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 1. Authenticate the caller
+    // 1. Authenticate the caller — canonical pattern: a client bound to the
+    // request's Authorization header, using the anon key.
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Não autorizado" }, 401);
+    if (!authHeader) return json({ error: "Não autorizado (sem sessão)" }, 401);
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) return json({ error: "Token inválido" }, 401);
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: { headers: { Authorization: authHeader } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      }
+    );
+
+    let { data: { user }, error: authError } = await authClient.auth.getUser();
+    // Fallback: validate the bearer token directly with the service client
+    if (authError || !user) {
+      const token = authHeader.replace("Bearer ", "");
+      const res = await supabase.auth.getUser(token);
+      user = res.data.user;
+      authError = res.error;
+    }
+    if (authError || !user) {
+      return json({ error: `Sessão inválida: ${authError?.message || "usuário não encontrado"}` }, 401);
+    }
 
     const body: RegisterClockRequest = await req.json();
     const { type, locationId, method, latitude, longitude, offlineTimestamp } = body;
