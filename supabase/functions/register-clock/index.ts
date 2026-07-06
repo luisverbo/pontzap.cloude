@@ -17,6 +17,8 @@ interface RegisterClockRequest {
   // Only used when flushing a punch that was stored offline. The server still
   // validates it, but preserves the original punch time instead of using now().
   offlineTimestamp?: string;
+  // Optional selfie (data URL) captured at punch time for anti-fraud
+  photo?: string;
 }
 
 // Haversine distance in meters
@@ -88,7 +90,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const body: RegisterClockRequest = await req.json();
-    const { type, locationId, method, latitude, longitude, offlineTimestamp } = body;
+    const { type, locationId, method, latitude, longitude, offlineTimestamp, photo } = body;
 
     if (!type || !locationId || !method) {
       return json({ error: "type, locationId e method são obrigatórios" }, 400);
@@ -180,6 +182,26 @@ serve(async (req: Request): Promise<Response> => {
       }
       console.error("Insert error:", insertError);
       return json({ error: "Erro ao registrar ponto" }, 500);
+    }
+
+    // 6b. Upload the selfie (best-effort — never blocks the punch)
+    if (photo && typeof photo === "string" && photo.startsWith("data:")) {
+      try {
+        const base64 = photo.split(",")[1] || "";
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const path = `${record.id}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("clock-photos")
+          .upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from("clock-photos").getPublicUrl(path);
+          await supabase.from("clock_records").update({ photo_path: pub.publicUrl }).eq("id", record.id);
+        } else {
+          console.error("Photo upload error:", upErr);
+        }
+      } catch (e) {
+        console.error("Photo processing failed:", e);
+      }
     }
 
     // 7. Folguista automation — on ENTRY, auto-create the daily payment record,

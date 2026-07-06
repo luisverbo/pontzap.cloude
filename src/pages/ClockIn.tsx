@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -91,6 +91,55 @@ export default function ClockIn() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [pendingClockType, setPendingClockType] = useState<ClockType | null>(null);
   const [receipt, setReceipt] = useState<ClockReceipt | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoResolverRef = useRef<((v: string | null) => void) | null>(null);
+
+  // Prompt the user for a selfie (front camera on mobile) and return a small
+  // compressed data URL, or null if they cancel. Never throws.
+  const capturePhoto = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const input = photoInputRef.current;
+      if (!input) { resolve(null); return; }
+      photoResolverRef.current = resolve;
+      input.value = '';
+      input.click();
+    });
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const resolve = photoResolverRef.current;
+    photoResolverRef.current = null;
+    const file = e.target.files?.[0];
+    if (!file || !resolve) { resolve?.(null); return; }
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      // Compress/resize to keep the payload small
+      const compressed = await new Promise<string>((res) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 640;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { res(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          res(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => res(dataUrl);
+        img.src = dataUrl;
+      });
+      resolve(compressed);
+    } catch {
+      resolve(null);
+    }
+  };
 
   const openReceiptFor = (record: any) => {
     setReceipt({
@@ -393,9 +442,13 @@ export default function ClockIn() {
       return { success: false };
     }
 
+    // Ask for a selfie to confirm identity (anti-fraud). Optional: if the user
+    // cancels or the camera fails, the punch still goes through.
+    const photo = await capturePhoto();
+
     // Send GPS coordinates along with the QR punch so the server can enforce
     // the geofence — a photo/screenshot of the QR from home no longer works.
-    const result = await clockIn(type, locationId, 'qr', location?.lat, location?.lng);
+    const result = await clockIn(type, locationId, 'qr', location?.lat, location?.lng, photo || undefined);
 
     if (result.success && result.recordId) {
       sendWhatsAppNotification(result.recordId, type, 'qr');
@@ -499,6 +552,15 @@ export default function ClockIn() {
 
   return (
     <MainLayout>
+      {/* Hidden selfie capture input (front camera on mobile) */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={handlePhotoSelected}
+      />
       <div className="max-w-2xl mx-auto px-4 sm:px-0 space-y-4 sm:space-y-6 animate-fade-in pb-6">
         {/* Welcome Header */}
         <div className="flex items-center justify-between gap-2 pt-2">

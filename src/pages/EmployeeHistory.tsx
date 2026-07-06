@@ -626,14 +626,30 @@ export default function EmployeeHistory() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            {getLocationName(record.location_id)}
+                        <div className="flex items-center gap-2">
+                          {(record as any).photo_path && (
+                            <a
+                              href={(record as any).photo_path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Ver foto do registro"
+                            >
+                              <img
+                                src={(record as any).photo_path}
+                                alt="Foto do ponto"
+                                className="w-10 h-10 rounded-lg object-cover border border-border hover:ring-2 hover:ring-primary transition-all"
+                              />
+                            </a>
+                          )}
+                          <div className="text-right text-sm">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              {getLocationName(record.location_id)}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {record.is_manual ? 'Registro Manual' : record.method === 'qr' ? 'QR Code' : 'GPS'}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {record.is_manual ? 'Registro Manual' : record.method === 'qr' ? 'QR Code' : 'GPS'}
-                          </span>
                         </div>
                       </div>
                     ))}

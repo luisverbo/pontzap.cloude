@@ -128,7 +128,8 @@ export function useClockRecords(employeeId?: string) {
     locationId: string,
     method: 'gps' | 'qr',
     latitude?: number,
-    longitude?: number
+    longitude?: number,
+    photo?: string
   ): Promise<{ success: boolean; outsideRadius?: boolean; distance?: number; recordId?: string; offline?: boolean; receipt?: ClockReceipt }> => {
     if (!employeeId) {
       toast.error('Funcionário não identificado');
@@ -185,7 +186,7 @@ export function useClockRecords(employeeId?: string) {
     // client no longer inserts directly.
     try {
       const { data, error } = await supabase.functions.invoke('register-clock', {
-        body: { type, locationId, method, latitude, longitude },
+        body: { type, locationId, method, latitude, longitude, photo },
       });
 
       // Non-2xx responses arrive as `error` with the Response in error.context
