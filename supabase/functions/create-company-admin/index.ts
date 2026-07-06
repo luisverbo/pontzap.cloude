@@ -11,6 +11,8 @@ interface CreateCompanyAdminRequest {
   companyName: string;
   email: string;
   phone?: string;
+  // Optional: a password chosen by the master. If omitted, one is generated.
+  password?: string;
 }
 
 // Generate a random password
@@ -66,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { companyId, companyName, email, phone }: CreateCompanyAdminRequest = await req.json();
+    const { companyId, companyName, email, phone, password: chosenPassword }: CreateCompanyAdminRequest = await req.json();
 
     if (!companyId || !companyName || !email) {
       return new Response(
@@ -75,10 +77,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    if (chosenPassword && chosenPassword.length < 6) {
+      return new Response(
+        JSON.stringify({ error: "A senha deve ter pelo menos 6 caracteres" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`Creating admin user for company ${companyName} (${companyId}) with email ${email}`);
 
-    // Generate a random password
-    const password = generateRandomPassword(10);
+    // Use the master-chosen password, or generate one
+    const password = chosenPassword && chosenPassword.length >= 6 ? chosenPassword : generateRandomPassword(10);
 
     // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();

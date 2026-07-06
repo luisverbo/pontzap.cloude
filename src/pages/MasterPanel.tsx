@@ -32,7 +32,8 @@ import {
   Trash2,
   MessageSquare,
   Settings,
-  Save
+  Save,
+  KeyRound
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -104,6 +105,7 @@ export default function MasterPanel() {
     name: '',
     email: '',
     phone: '',
+    password: '',
     status: 'pending' as Company['status'],
     payment_status: 'pending' as Company['payment_status'],
     subscription_start_date: '',
@@ -113,6 +115,44 @@ export default function MasterPanel() {
 
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // Reset-password dialog for a company's admin
+  const [resetPwCompany, setResetPwCompany] = useState<Company | null>(null);
+  const [resetPwValue, setResetPwValue] = useState('');
+  const [resetPwSaving, setResetPwSaving] = useState(false);
+
+  const handleResetCompanyPassword = async () => {
+    if (!resetPwCompany) return;
+    if (!resetPwCompany.email) {
+      toast.error('Esta empresa não tem email de administrador cadastrado');
+      return;
+    }
+    if (!resetPwValue || resetPwValue.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    setResetPwSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-company-admin', {
+        body: {
+          companyId: resetPwCompany.id,
+          companyName: resetPwCompany.name,
+          email: resetPwCompany.email,
+          password: resetPwValue,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Nova senha definida! Repasse ao cliente.');
+      setResetPwCompany(null);
+      setResetPwValue('');
+    } catch (e: any) {
+      console.error('Error resetting password:', e);
+      toast.error(`Erro ao redefinir senha: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setResetPwSaving(false);
+    }
+  };
 
   const [masterForm, setMasterForm] = useState({
     email: '',
@@ -278,6 +318,7 @@ export default function MasterPanel() {
               companyName: companyForm.name,
               email: companyForm.email,
               phone: companyForm.phone || undefined,
+              password: companyForm.password || undefined,
             }
           });
           
@@ -297,6 +338,7 @@ export default function MasterPanel() {
         name: '',
         email: '',
         phone: '',
+        password: '',
         status: 'pending',
         payment_status: 'pending',
         subscription_start_date: '',
@@ -362,6 +404,7 @@ export default function MasterPanel() {
         name: '',
         email: '',
         phone: '',
+        password: '',
         status: 'pending',
         payment_status: 'pending',
         subscription_start_date: '',
@@ -745,6 +788,18 @@ export default function MasterPanel() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>Senha do Administrador</Label>
+                    <Input
+                      type="text"
+                      value={companyForm.password}
+                      onChange={(e) => setCompanyForm({ ...companyForm, password: e.target.value })}
+                      placeholder="Deixe em branco para gerar automaticamente"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Senha de acesso do cliente. Mínimo 6 caracteres. Se vazio, o sistema gera uma.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Plano</Label>
                     <Select
                       value={companyForm.plan}
@@ -1099,13 +1154,21 @@ export default function MasterPanel() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="icon"
                         onClick={() => handleAccessCompany(company)}
                         title="Acessar conta"
                       >
                         <LogIn className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => { setResetPwCompany(company); setResetPwValue(''); }}
+                        title="Gerar nova senha para o cliente"
+                      >
+                        <KeyRound className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -1301,6 +1364,37 @@ export default function MasterPanel() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Reset admin password dialog */}
+        <Dialog open={!!resetPwCompany} onOpenChange={(open) => { if (!open) { setResetPwCompany(null); setResetPwValue(''); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5" />
+                Nova senha do cliente
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Defina uma nova senha para <strong>{resetPwCompany?.name}</strong>
+                {resetPwCompany?.email ? ` (${resetPwCompany.email})` : ''}. Repasse ao cliente.
+              </p>
+              <div className="space-y-2">
+                <Label>Nova Senha</Label>
+                <Input
+                  type="text"
+                  value={resetPwValue}
+                  onChange={(e) => setResetPwValue(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <Button className="w-full" onClick={handleResetCompanyPassword} disabled={resetPwSaving}>
+                {resetPwSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Definir Nova Senha
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
