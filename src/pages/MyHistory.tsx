@@ -72,6 +72,23 @@ export default function MyHistory() {
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
 
+  // Hour-bank balance (in minutes)
+  const [hourBalance, setHourBalance] = useState<number | null>(null);
+
+  const fetchHourBalance = async (employeeId: string) => {
+    const { data } = await supabase
+      .from('hour_bank_entries')
+      .select('minutes')
+      .eq('employee_id', employeeId);
+    if (data) setHourBalance((data as any[]).reduce((s, r) => s + (r.minutes || 0), 0));
+  };
+
+  const fmtBalance = (min: number): string => {
+    const sign = min < 0 ? '-' : '+';
+    const a = Math.abs(min);
+    return `${min === 0 ? '' : sign}${Math.floor(a / 60)}h${String(a % 60).padStart(2, '0')}`;
+  };
+
   const viewMonth = new Date().getMonth() + 1;
   const viewYear = new Date().getFullYear();
 
@@ -157,6 +174,7 @@ export default function MyHistory() {
 
         setEmployeeData(empData);
         fetchSignature(empData.id);
+        fetchHourBalance(empData.id);
 
         // Fetch locations
         const { data: locData, error: locError } = await supabase
@@ -477,6 +495,23 @@ export default function MyHistory() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Saldo do banco de horas */}
+        {hourBalance !== null && hourBalance !== 0 && (
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${hourBalance > 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                <Clock className={`h-5 w-5 ${hourBalance > 0 ? 'text-success' : 'text-destructive'}`} />
+              </div>
+              <div>
+                <p className="font-medium">Banco de Horas</p>
+                <p className="text-sm text-muted-foreground">
+                  Saldo atual: <strong className={hourBalance > 0 ? 'text-success' : 'text-destructive'}>{fmtBalance(hourBalance)}</strong>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Assinatura do espelho do mês */}
         {filterPeriod === 'month' && (

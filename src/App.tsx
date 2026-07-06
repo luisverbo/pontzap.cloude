@@ -20,6 +20,7 @@ import FixedSchedules from "./pages/FixedSchedules";
 import PunctualSchedules from "./pages/PunctualSchedules";
 import Holidays from "./pages/Holidays";
 import CompanyProfile from "./pages/CompanyProfile";
+import HourBank from "./pages/HourBank";
 import LatenessResponse from "./pages/LatenessResponse";
 import FinancialManagement from "./pages/FinancialManagement";
 import MasterPanel from "./pages/MasterPanel";
@@ -152,6 +153,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <CompanyProfile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/banco-horas"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <HourBank />
           </ProtectedRoute>
         }
       />

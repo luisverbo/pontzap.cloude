@@ -82,6 +82,7 @@ const navGroups: NavGroup[] = [
     roles: ['admin', 'manager'],
     items: [
       { label: 'Folguistas', href: '/anotacoes', icon: <UserCheck className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Banco de Horas', href: '/banco-horas', icon: <Clock className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Notificações', href: '/notifications', icon: <Bell className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Financeiro', href: '/financeiro', icon: <DollarSign className="h-4 w-4" />, roles: ['admin'] },
     ],
