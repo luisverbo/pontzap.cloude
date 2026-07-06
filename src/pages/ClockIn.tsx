@@ -19,7 +19,8 @@ import {
   Wallet,
   Calendar,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from 'lucide-react';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
@@ -90,6 +91,16 @@ export default function ClockIn() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [pendingClockType, setPendingClockType] = useState<ClockType | null>(null);
   const [receipt, setReceipt] = useState<ClockReceipt | null>(null);
+
+  const openReceiptFor = (record: any) => {
+    setReceipt({
+      nsr: record.nsr ?? null,
+      hash: record.record_hash ?? null,
+      timestamp: record.timestamp,
+      type: record.type,
+      locationName: record.location?.name || 'Local',
+    });
+  };
 
   // Password change dialog state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -769,9 +780,18 @@ export default function ClockIn() {
                     }`}>
                       {CLOCK_TYPE_LABELS[record.type as ClockType]}
                     </span>
-                    <span className="text-sm font-semibold text-foreground">
-                      {format(new Date(record.timestamp), 'HH:mm')}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-foreground">
+                        {format(new Date(record.timestamp), 'HH:mm')}
+                      </span>
+                      <button
+                        onClick={() => openReceiptFor(record)}
+                        title="Ver comprovante"
+                        className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
