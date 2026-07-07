@@ -29,16 +29,31 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
+import { useAuth } from '@/contexts/AuthContext';
+import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type NotificationRecipient = Tables<'notification_recipients'>;
 type NotificationScope = 'all' | 'location';
 
 export default function NotificationRecipients() {
+  const { companyStatus } = useAuth();
   const [recipients, setRecipients] = useState<NotificationRecipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { locations } = useLocations();
+
+  const resolveCompanyId = async (): Promise<string | null> => {
+    const imp = getImpersonatedCompanyId();
+    if (imp) return imp;
+    if (companyStatus?.id) return companyStatus.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: emp } = await supabase.from('employees').select('company_id').eq('user_id', user.id).maybeSingle();
+    if (emp?.company_id) return emp.company_id;
+    const { data: owned } = await supabase.from('companies').select('id').eq('admin_user_id', user.id).maybeSingle();
+    return owned?.id ?? null;
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState<NotificationRecipient | null>(null);
@@ -150,10 +165,11 @@ export default function NotificationRecipients() {
         if (error) throw error;
         toast.success('Destinatário atualizado!');
       } else {
-        // Insert new
+        // Insert new — stamp company_id so the RLS company check passes
+        const companyId = await resolveCompanyId();
         const { error } = await supabase
           .from('notification_recipients')
-          .insert(data);
+          .insert({ ...data, company_id: companyId });
 
         if (error) throw error;
         toast.success('Destinatário adicionado!');
@@ -164,7 +180,7 @@ export default function NotificationRecipients() {
       setDialogOpen(false);
     } catch (error: any) {
       console.error('Error saving recipient:', error);
-      toast.error('Erro ao salvar destinatário');
+      toast.error(`Erro ao salvar destinatário: ${error?.message || error?.code || 'desconhecido'}`);
     } finally {
       setSaving(false);
     }
