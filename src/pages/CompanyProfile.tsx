@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
-import { Building2, Loader2, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Building2, Loader2, Save, MessageCircle } from 'lucide-react';
 
 export default function CompanyProfile() {
   const { companyStatus } = useAuth();
@@ -19,6 +20,55 @@ export default function CompanyProfile() {
     name: '', cnpj: '', email: '', phone: '',
     address: '', cep: '', city: '', state: '',
   });
+
+  // Daily WhatsApp summary — opt-in, per-company
+  const [summarySaving, setSummarySaving] = useState(false);
+  const [summaryConfigId, setSummaryConfigId] = useState<string | null>(null);
+  const [summary, setSummary] = useState({ enabled: false, send_time: '18:00', whatsapp: '' });
+
+  const loadSummaryConfig = async (id: string) => {
+    const { data } = await supabase
+      .from('daily_summary_config')
+      .select('id, enabled, send_time, whatsapp')
+      .eq('company_id', id)
+      .maybeSingle();
+    if (data) {
+      setSummaryConfigId((data as any).id);
+      setSummary({
+        enabled: (data as any).enabled ?? false,
+        send_time: String((data as any).send_time || '18:00').slice(0, 5),
+        whatsapp: (data as any).whatsapp || '',
+      });
+    }
+  };
+
+  const handleSaveSummary = async () => {
+    if (!companyId) return;
+    setSummarySaving(true);
+    try {
+      const payload = {
+        company_id: companyId,
+        enabled: summary.enabled,
+        send_time: summary.send_time,
+        whatsapp: summary.whatsapp.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (summaryConfigId) {
+        const { error } = await supabase.from('daily_summary_config').update(payload).eq('id', summaryConfigId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('daily_summary_config').insert(payload).select('id').single();
+        if (error) throw error;
+        setSummaryConfigId(data.id);
+      }
+      toast.success(summary.enabled ? 'Resumo diário ativado!' : 'Configuração salva');
+    } catch (e: any) {
+      console.error('Erro ao salvar resumo diário:', e);
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setSummarySaving(false);
+    }
+  };
 
   const resolveCompanyId = async (): Promise<string | null> => {
     const imp = getImpersonatedCompanyId();
@@ -56,6 +106,7 @@ export default function CompanyProfile() {
             state: (data as any).state || '',
           });
         }
+        await loadSummaryConfig(id);
       } catch (e) {
         console.error('Erro ao carregar empresa:', e);
       } finally {
@@ -160,6 +211,60 @@ export default function CompanyProfile() {
             <Button className="w-full" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Salvar
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="card-modern">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Resumo Diário no WhatsApp
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
+              <div>
+                <p className="font-medium text-sm">Receber resumo diário</p>
+                <p className="text-xs text-muted-foreground">
+                  Quantos bateram ponto, atrasos, horas extras e custo de folguistas do dia
+                </p>
+              </div>
+              <Switch
+                checked={summary.enabled}
+                onCheckedChange={(v) => setSummary({ ...summary, enabled: v })}
+              />
+            </div>
+
+            {summary.enabled && (
+              <>
+                <div className="space-y-2">
+                  <Label>Horário de envio</Label>
+                  <Input
+                    type="time"
+                    value={summary.send_time}
+                    onChange={(e) => setSummary({ ...summary, send_time: e.target.value })}
+                    className="max-w-[160px]"
+                  />
+                  <p className="text-xs text-muted-foreground">Horário de São Paulo</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Enviar para (opcional)</Label>
+                  <Input
+                    value={summary.whatsapp}
+                    onChange={(e) => setSummary({ ...summary, whatsapp: e.target.value })}
+                    placeholder="5511999999999"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se vazio, usa o telefone da empresa cadastrado acima
+                  </p>
+                </div>
+              </>
+            )}
+
+            <Button className="w-full" onClick={handleSaveSummary} disabled={summarySaving}>
+              {summarySaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar Preferência
             </Button>
           </CardContent>
         </Card>

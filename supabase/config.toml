@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.daily-summary]
+verify_jwt = false
