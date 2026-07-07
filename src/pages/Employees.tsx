@@ -262,7 +262,14 @@ export default function Employees() {
       });
 
       if (error) {
-        throw new Error(error.message);
+        // supabase-js gives a generic "non-2xx status code" message; the real
+        // reason is in the response body the function returned.
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
       }
 
       if (data?.error) {

@@ -128,7 +128,9 @@ serve(async (req: Request): Promise<Response> => {
         throw new Error("Empresa inválida para criação de funcionário");
       }
     } else {
-      // Get requesting user's company_id
+      // Get requesting user's company_id: try the employees link first, then
+      // fall back to the company they own (admin_user_id) — owner-admins
+      // typically have no employees row of their own.
       const { data: adminEmployee, error: adminEmpError } = await supabaseAdmin
         .from("employees")
         .select("company_id")
@@ -140,6 +142,20 @@ serve(async (req: Request): Promise<Response> => {
       }
 
       resolvedCompanyId = adminEmployee?.company_id;
+
+      if (!resolvedCompanyId) {
+        const { data: ownedCompany, error: ownedError } = await supabaseAdmin
+          .from("companies")
+          .select("id")
+          .eq("admin_user_id", requestingUser.id)
+          .maybeSingle();
+
+        if (ownedError) {
+          console.error("Error fetching owned company:", ownedError);
+        }
+        resolvedCompanyId = ownedCompany?.id;
+      }
+
       console.log(`Admin's company_id: ${resolvedCompanyId}`);
 
       if (!resolvedCompanyId) {
