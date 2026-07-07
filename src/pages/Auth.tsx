@@ -344,15 +344,36 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen lg:grid lg:grid-cols-2">
+      {/* Brand panel — large screens only */}
+      <div
+        className="hidden lg:flex flex-col justify-between p-12 text-white relative"
+        style={{ backgroundImage: 'var(--gradient-hero)' }}
+      >
+        <img src={logoPontzapBranca} alt="PONTZAP" className="h-16 w-auto object-contain self-start" />
+        <div className="max-w-md">
+          <h2 className="font-display text-3xl xl:text-4xl font-bold leading-tight text-white">
+            O ponto dos seus funcionários, no controle.
+          </h2>
+          <p className="mt-4 text-white/80 text-base leading-relaxed">
+            Feito para quem gerencia equipes em campo — porteiros, guardas de piscina,
+            faxineiros em condomínios. Registro por QR e GPS, comprovante legal (Portaria 671)
+            e alertas no WhatsApp.
+          </p>
+        </div>
+        <p className="text-white/60 text-sm font-mono">PONTZAP · Controle de Ponto</p>
+      </div>
+
+      {/* Form column */}
+      <div className="flex items-center justify-center p-4 sm:p-8 bg-background min-h-screen lg:min-h-0">
       <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        {/* Logo — mobile only (brand panel carries it on desktop) */}
+        <div className="flex flex-col items-center mb-8 lg:hidden">
           <img src={logoSrc} alt="Logo PONTZAP" className="h-20 w-auto mb-4 object-contain" />
           <p className="text-muted-foreground">Controle de Ponto Inteligente</p>
         </div>
 
-        <Card className="card-modern">
+        <Card variant="elevated">
           <CardHeader className="text-center">
             <CardTitle>{mode === 'login' ? 'Entrar' : 'Criar Conta'}</CardTitle>
             <CardDescription>
@@ -463,6 +484,7 @@ export default function Auth() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
