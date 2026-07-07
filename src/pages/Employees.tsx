@@ -378,11 +378,20 @@ export default function Employees() {
               <Card
                 key={employee.id}
                 variant="interactive"
-                className={`animate-slide-up cursor-pointer ${
+                role="button"
+                tabIndex={0}
+                aria-label={`Ver histórico de ${employee.profile?.name || 'funcionário'}`}
+                className={`animate-slide-up cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   !employee.invitation_accepted ? 'border-warning/40' : ''
                 }`}
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => viewHistory(employee)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    viewHistory(employee);
+                  }
+                }}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -461,12 +470,27 @@ export default function Employees() {
 
         {filteredEmployees.length === 0 && (
           <Card variant="default">
-            <CardContent className="py-12 text-center">
-              <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">Nenhum funcionário encontrado</h3>
-              <p className="text-muted-foreground mt-1">
-                Ajuste sua busca ou aguarde o cadastro de funcionários.
-              </p>
+            <CardContent className="py-14 text-center flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <User className="h-7 w-7 text-primary" />
+              </div>
+              {employees.length === 0 ? (
+                <>
+                  <h3 className="text-lg font-semibold">Cadastre seu primeiro funcionário</h3>
+                  <p className="text-muted-foreground mt-1 max-w-sm">
+                    Adicione a equipe para que possam bater ponto e você acompanhar tudo por aqui.
+                  </p>
+                  <Button className="mt-5" onClick={() => setCreateDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Funcionário
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold">Nenhum funcionário encontrado</h3>
+                  <p className="text-muted-foreground mt-1">Ajuste sua busca.</p>
+                </>
+              )}
             </CardContent>
           </Card>
         )}

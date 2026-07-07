@@ -405,12 +405,27 @@ export default function Locations() {
 
         {filteredLocations.length === 0 && (
           <Card variant="default">
-            <CardContent className="py-12 text-center">
-              <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">Nenhum local encontrado</h3>
-              <p className="text-muted-foreground mt-1">
-                Adicione locais de trabalho ou ajuste sua busca.
-              </p>
+            <CardContent className="py-14 text-center flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <MapPin className="h-7 w-7 text-primary" />
+              </div>
+              {locations.length === 0 ? (
+                <>
+                  <h3 className="text-lg font-semibold">Cadastre seu primeiro local</h3>
+                  <p className="text-muted-foreground mt-1 max-w-sm">
+                    Cada local ganha um QR Code e um raio de GPS para validar as batidas.
+                  </p>
+                  <Button className="mt-5" onClick={() => setDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Local
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold">Nenhum local encontrado</h3>
+                  <p className="text-muted-foreground mt-1">Ajuste sua busca.</p>
+                </>
+              )}
             </CardContent>
           </Card>
         )}

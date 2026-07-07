@@ -193,37 +193,11 @@
     background-image: var(--gradient-primary);
   }
 
-  /* Glow Effects */
-  .btn-glow {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .btn-glow-accent {
-    box-shadow: var(--shadow-accent-glow);
-  }
-
   /* Legacy alias — kept in sync with the Card component's default variant so the
      two never disagree on radius/border. Prefer <Card /> in new code. */
   .card-modern {
     @apply bg-card rounded-lg border border-border/60 transition-all duration-200;
     box-shadow: var(--shadow-card);
-  }
-
-  /* Pastel Status Cards */
-  .status-success {
-    @apply bg-[hsl(var(--pastel-green))] border-success/30;
-  }
-
-  .status-warning {
-    @apply bg-[hsl(var(--pastel-yellow))] border-warning/30;
-  }
-
-  .status-info {
-    @apply bg-[hsl(var(--pastel-blue))] border-primary/30;
-  }
-
-  .status-error {
-    @apply bg-[hsl(var(--pastel-red))] border-destructive/30;
   }
 
   /* Sidebar Styles */
@@ -249,10 +223,6 @@
 
   .animate-scale-in {
     animation: scaleIn 0.25s ease-out forwards;
-  }
-
-  .animate-pulse-soft {
-    animation: pulseSoft 2s ease-in-out infinite;
   }
 
   .animate-float {
@@ -287,15 +257,6 @@
     to {
       opacity: 1;
       transform: scale(1);
-    }
-  }
-
-  @keyframes pulseSoft {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.6;
     }
   }
 
