@@ -12,6 +12,8 @@ import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, CalendarDays, Trash2, Loader2 } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Holiday {
   id: string;
@@ -104,21 +106,19 @@ export default function Holidays() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Feriados</h1>
-            <p className="text-muted-foreground mt-1">
-              Cadastre feriados para o cálculo correto de jornada e horas extras
-            </p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="glow">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Feriado
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
+        <PageHeader
+          icon={<CalendarDays className="h-6 w-6" />}
+          title="Feriados"
+          description="Cadastre feriados para o cálculo correto de jornada e horas extras"
+          actions={
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="glow">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Feriado
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm">
               <DialogHeader>
                 <DialogTitle>Adicionar Feriado</DialogTitle>
               </DialogHeader>
@@ -131,18 +131,21 @@ export default function Holidays() {
                   <Label>Nome</Label>
                   <Input placeholder="Ex: Natal" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
-                <Button className="w-full" onClick={handleAdd} disabled={saving}>
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Adicionar
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+                  <Button className="w-full" onClick={handleAdd} disabled={saving}>
+                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Adicionar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 rounded-lg" />
+            ))}
           </div>
         ) : holidays.length === 0 ? (
           <Card>

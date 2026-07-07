@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AvatarInitial } from '@/components/ui/avatar-initial';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -386,9 +387,7 @@ export default function Employees() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
-                        {(employee.profile?.name || 'U').charAt(0)}
-                      </div>
+                      <AvatarInitial name={employee.profile?.name || 'U'} size="lg" />
                       <div>
                         <h3 className="font-semibold">{employee.profile?.name || 'Sem nome'}</h3>
                         <p className="text-sm text-muted-foreground">{employee.profile?.email || ''}</p>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AvatarInitial } from '@/components/ui/avatar-initial';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -842,9 +843,7 @@ export default function Reports() {
                           >
                             <td className="p-3">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                                  {emp.name.charAt(0)}
-                                </div>
+                                <AvatarInitial name={emp.name} size="sm" />
                                 <div>
                                   <p className="font-medium text-sm">{emp.name}</p>
                                   <p className="text-xs text-muted-foreground">{emp.email}</p>
@@ -945,9 +944,7 @@ export default function Reports() {
                             </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-full bg-warning/10 flex items-center justify-center text-warning font-semibold text-xs">
-                                  {alert.employee_name.charAt(0)}
-                                </div>
+                                <AvatarInitial name={alert.employee_name} size="sm" tone="warning" />
                                 <span className="font-medium text-sm">{alert.employee_name}</span>
                               </div>
                             </td>

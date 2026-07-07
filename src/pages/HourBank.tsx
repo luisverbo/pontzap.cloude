@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { AvatarInitial } from '@/components/ui/avatar-initial';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -173,13 +175,11 @@ export default function HourBank() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
-            <Clock className="h-7 w-7 text-primary" />
-            Banco de Horas
-          </h1>
-          <p className="text-muted-foreground mt-1">Saldo de horas extras e débitos por funcionário</p>
-        </div>
+        <PageHeader
+          icon={<Clock className="h-6 w-6" />}
+          title="Banco de Horas"
+          description="Saldo de horas extras e débitos por funcionário"
+        />
 
         {loading ? (
           <div className="space-y-2">
@@ -197,9 +197,7 @@ export default function HourBank() {
                   <CardContent className="p-0">
                     <div className="flex items-center justify-between p-4">
                       <CollapsibleTrigger className="flex items-center gap-3 flex-1 text-left">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary shrink-0">
-                          {emp.name.charAt(0).toUpperCase()}
-                        </div>
+                        <AvatarInitial name={emp.name} size="md" />
                         <div>
                           <p className="font-medium">{emp.name}</p>
                           <p className="text-xs text-muted-foreground">{emp.entries.length} lançamento{emp.entries.length !== 1 ? 's' : ''}</p>

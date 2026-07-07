@@ -9,6 +9,8 @@ import { ptBR } from 'date-fns/locale';
 import { CLOCK_TYPE_LABELS, ClockType } from '@/types';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AvatarInitial } from '@/components/ui/avatar-initial';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -282,14 +284,10 @@ export default function Dashboard() {
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="space-y-1">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Olá, {profile?.name?.split(' ')[0] || 'Usuário'}
-          </h1>
-          <p className="text-muted-foreground">
-            Acompanhe o controle de ponto da sua empresa
-          </p>
-        </div>
+        <PageHeader
+          title={`Olá, ${profile?.name?.split(' ')[0] || 'Usuário'}`}
+          description="Acompanhe o controle de ponto da sua empresa"
+        />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
@@ -337,9 +335,7 @@ export default function Dashboard() {
                       className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 hover:bg-secondary/80 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                          {clock.employee_name.charAt(0)}
-                        </div>
+                        <AvatarInitial name={clock.employee_name} size="md" />
                         <div>
                           <p className="font-medium text-sm text-foreground">{clock.employee_name}</p>
                           <p className="text-xs text-muted-foreground">{clock.location_name}</p>

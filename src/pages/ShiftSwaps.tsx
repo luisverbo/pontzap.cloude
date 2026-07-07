@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useShiftSwaps } from '@/hooks/useShiftSwaps';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -26,12 +27,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendente', color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' },
-  accepted: { label: 'Aceito', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  approved: { label: 'Aprovado', color: 'bg-green-500/10 text-green-600 border-green-500/20' },
-  rejected: { label: 'Rejeitado', color: 'bg-red-500/10 text-red-600 border-red-500/20' },
-  cancelled: { label: 'Cancelado', color: 'bg-gray-500/10 text-gray-600 border-gray-500/20' },
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
+const STATUS_LABELS: Record<string, { label: string; variant: BadgeVariant }> = {
+  pending: { label: 'Pendente', variant: 'warning' },
+  accepted: { label: 'Aceito', variant: 'info' },
+  approved: { label: 'Aprovado', variant: 'success' },
+  rejected: { label: 'Rejeitado', variant: 'destructive' },
+  cancelled: { label: 'Cancelado', variant: 'secondary' },
 };
 
 export default function ShiftSwaps() {
@@ -89,17 +91,11 @@ export default function ShiftSwaps() {
     <MainLayout>
       <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-3">
-              <ArrowLeftRight className="h-7 w-7 text-primary" />
-              Trocas de Escala
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie solicitações de troca de escala entre funcionários
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          icon={<ArrowLeftRight className="h-6 w-6" />}
+          title="Trocas de Escala"
+          description="Gerencie solicitações de troca de escala entre funcionários"
+        />
 
         {/* Search */}
         <div className="relative max-w-md">
@@ -122,18 +118,18 @@ export default function ShiftSwaps() {
             {pendingApprovalSwaps.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-blue-500" />
+                  <AlertCircle className="h-5 w-5 text-primary" />
                   Aguardando Sua Aprovação ({pendingApprovalSwaps.length})
                 </h2>
                 <div className="grid gap-4">
                   {pendingApprovalSwaps.map((swap) => (
-                    <Card key={swap.id} className="border-blue-500/30 bg-blue-500/5">
+                    <Card key={swap.id} className="border-primary/30 bg-primary/5">
                       <CardContent className="p-4">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           {/* Swap Details */}
                           <div className="flex-1 space-y-3">
                             <div className="flex items-center gap-2">
-                              <Badge className={STATUS_LABELS[swap.status].color}>
+                              <Badge variant={STATUS_LABELS[swap.status].variant}>
                                 {STATUS_LABELS[swap.status].label}
                               </Badge>
                               <Badge variant="outline">
@@ -204,7 +200,7 @@ export default function ShiftSwaps() {
                               size="sm"
                               onClick={() => handleApprove(swap.id)}
                               disabled={processing === swap.id}
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-success hover:bg-success/90 text-success-foreground"
                             >
                               {processing === swap.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -226,17 +222,17 @@ export default function ShiftSwaps() {
             {pendingSwaps.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-yellow-500" />
+                  <Clock className="h-5 w-5 text-warning" />
                   Aguardando Aceite do Funcionário ({pendingSwaps.length})
                 </h2>
                 <div className="grid gap-4">
                   {pendingSwaps.map((swap) => (
-                    <Card key={swap.id} className="border-yellow-500/30 bg-yellow-500/5">
+                    <Card key={swap.id} className="border-warning/30 bg-warning/5">
                       <CardContent className="p-4">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="flex-1 space-y-3">
                             <div className="flex items-center gap-2">
-                              <Badge className={STATUS_LABELS[swap.status].color}>
+                              <Badge variant={STATUS_LABELS[swap.status].variant}>
                                 {STATUS_LABELS[swap.status].label}
                               </Badge>
                               <Badge variant="outline">
@@ -279,7 +275,7 @@ export default function ShiftSwaps() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            {swap.status === 'approved' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                            {swap.status === 'approved' && <CheckCircle2 className="h-5 w-5 text-success" />}
                             {swap.status === 'rejected' && <XCircle className="h-5 w-5 text-red-500" />}
                             {swap.status === 'cancelled' && <X className="h-5 w-5 text-gray-500" />}
                             
@@ -298,7 +294,7 @@ export default function ShiftSwaps() {
                             </div>
                           </div>
                           
-                          <Badge className={STATUS_LABELS[swap.status].color}>
+                          <Badge variant={STATUS_LABELS[swap.status].variant}>
                             {STATUS_LABELS[swap.status].label}
                           </Badge>
                         </div>

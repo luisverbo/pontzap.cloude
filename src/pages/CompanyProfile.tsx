@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { Switch } from '@/components/ui/switch';
 import { Building2, Loader2, Save, MessageCircle } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function CompanyProfile() {
   const { companyStatus } = useAuth();
@@ -157,15 +158,11 @@ export default function CompanyProfile() {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
-            <Building2 className="h-7 w-7 text-primary" />
-            Minha Empresa
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Estes dados aparecem como empregador no espelho de ponto
-          </p>
-        </div>
+        <PageHeader
+          icon={<Building2 className="h-6 w-6" />}
+          title="Minha Empresa"
+          description="Estes dados aparecem como empregador no espelho de ponto"
+        />
 
         <Card className="card-modern">
           <CardHeader>
