@@ -119,8 +119,17 @@ serve(async (req: Request): Promise<Response> => {
       .eq("user_id", profile.id)
       .maybeSingle();
 
-    if (!employee || !employee.is_active) {
-      await sendWhatsApp(supabase, senderPhone, "Seu cadastro está inativo. Fale com o administrador.");
+    if (!employee) {
+      await sendWhatsApp(
+        supabase,
+        senderPhone,
+        `Olá ${profile.name.split(" ")[0]}! Este número está cadastrado no PONTZAP, mas não como funcionário — por isso não é possível bater ponto por ele (ex: contas de administrador não batem ponto).`
+      );
+      return ok();
+    }
+
+    if (!employee.is_active) {
+      await sendWhatsApp(supabase, senderPhone, "Seu cadastro de funcionário está inativo. Fale com o administrador.");
       return ok();
     }
 
