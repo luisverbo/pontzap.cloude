@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -309,8 +310,20 @@ export default function Employees() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-40 rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-full max-w-md rounded-md" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
         </div>
       </MainLayout>
     );
@@ -365,7 +378,7 @@ export default function Employees() {
                 key={employee.id}
                 variant="interactive"
                 className={`animate-slide-up cursor-pointer ${
-                  !employee.invitation_accepted ? 'border-2 border-yellow-400 bg-yellow-50/50 dark:bg-yellow-900/10' : ''
+                  !employee.invitation_accepted ? 'border-warning/40' : ''
                 }`}
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => viewHistory(employee)}
@@ -417,28 +430,16 @@ export default function Employees() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mt-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        employee.type === 'fixed'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-accent/10 text-accent'
-                      }`}
-                    >
+                    <Badge variant="info" className="font-medium">
                       {employee.type === 'fixed' ? 'Fixo' : 'Folguista'}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        employee.is_active
-                          ? 'bg-success/10 text-success'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
+                    </Badge>
+                    <Badge variant={employee.is_active ? 'success' : 'secondary'} className="font-medium">
                       {employee.is_active ? 'Ativo' : 'Inativo'}
-                    </span>
+                    </Badge>
                     {!employee.invitation_accepted && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                      <Badge variant="warning" className="font-medium">
                         Convite Pendente
-                      </span>
+                      </Badge>
                     )}
                   </div>
 
@@ -713,8 +714,8 @@ export default function Employees() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">💰 Pagamento em dinheiro</SelectItem>
-                    <SelectItem value="time_off">🏖️ Banco de horas (folga)</SelectItem>
+                    <SelectItem value="cash">Pagamento em dinheiro</SelectItem>
+                    <SelectItem value="time_off">Banco de horas (folga)</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">

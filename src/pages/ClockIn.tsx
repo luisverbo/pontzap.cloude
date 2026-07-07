@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
@@ -491,8 +492,27 @@ export default function ClockIn() {
   if (loadingEmployee) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="max-w-2xl mx-auto px-4 sm:px-0 space-y-4 sm:space-y-6 pb-6">
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-40 mx-auto" />
+              <Skeleton className="h-4 w-32 mx-auto" />
+            </div>
+          </div>
+          <Card variant="default">
+            <div className="py-8 sm:py-10 px-4 flex flex-col items-center gap-3">
+              <Skeleton className="h-14 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </Card>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Skeleton className="h-24 sm:h-32 rounded-xl" />
+            <Skeleton className="h-24 sm:h-32 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Skeleton className="h-20 sm:h-24 rounded-xl" />
+            <Skeleton className="h-20 sm:h-24 rounded-xl" />
+          </div>
         </div>
       </MainLayout>
     );
@@ -522,46 +542,29 @@ export default function ClockIn() {
           </Button>
         </div>
 
-        {/* Clock Display - Modern Design - Mobile Optimized */}
-        <Card className="card-modern text-center overflow-hidden">
-          <div className="bg-gradient-to-br from-primary/5 via-transparent to-accent/5 p-4 sm:p-8">
-            <div className="relative inline-flex items-center justify-center">
-              {/* Outer glow ring */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/15 to-accent/15 blur-2xl scale-125" />
-              
-              {/* Animated pulse ring */}
-              <div className="absolute w-40 h-40 sm:w-56 sm:h-56 rounded-full border-2 border-primary/20 animate-pulse-soft" />
-              
-              {/* Main clock circle - Smaller on mobile */}
-              <div className="relative w-36 h-36 sm:w-52 sm:h-52 rounded-full bg-card border-4 border-primary/30 shadow-xl flex flex-col items-center justify-center">
-                {/* Inner subtle ring */}
-                <div className="absolute inset-2 sm:inset-3 rounded-full border border-border/50" />
-                
-                {/* Time display */}
-                <p className="text-xl sm:text-4xl lg:text-5xl font-bold text-foreground font-mono tracking-tighter leading-none">
-                  {formatTime(currentTime)}
-                </p>
-                
-                {/* Location indicator inside circle */}
-                <div className="mt-2 sm:mt-3 flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
-                  {location ? (
-                    <>
-                      <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" />
-                      <span className="text-success font-medium">Localização ativa</span>
-                    </>
-                  ) : locationError ? (
-                    <>
-                      <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive" />
-                      <span className="text-destructive font-medium">Sem GPS</span>
-                    </>
-                  ) : (
-                    <>
-                      <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin text-muted-foreground" />
-                      <span className="text-muted-foreground">Localizando...</span>
-                    </>
-                  )}
-                </div>
-              </div>
+        {/* Clock Display — calm, high-contrast, no ambient motion */}
+        <Card variant="default" className="text-center overflow-hidden">
+          <div className="py-8 sm:py-10 px-4">
+            <p className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground font-mono tabular-nums tracking-tight leading-none">
+              {formatTime(currentTime)}
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+              {location ? (
+                <>
+                  <MapPin className="h-3.5 w-3.5 text-success" />
+                  <span className="text-success font-medium">Localização ativa</span>
+                </>
+              ) : locationError ? (
+                <>
+                  <MapPin className="h-3.5 w-3.5 text-destructive" />
+                  <span className="text-destructive font-medium">Sem GPS</span>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Localizando...</span>
+                </>
+              )}
             </div>
           </div>
         </Card>
@@ -590,12 +593,12 @@ export default function ClockIn() {
                   <Button
                     key={btn.type}
                     size="xl"
-                    className={`flex-col h-24 sm:h-32 gap-2 sm:gap-3 rounded-xl sm:rounded-2xl shadow-lg transition-all duration-300 touch-manipulation ${
-                      alreadyClocked 
-                        ? 'bg-muted text-muted-foreground' 
+                    className={`flex-col h-24 sm:h-32 gap-2 sm:gap-3 rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] ${
+                      alreadyClocked
+                        ? 'bg-muted text-muted-foreground'
                         : isEntry
-                          ? 'bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95 text-white shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:shadow-xl'
-                          : 'bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 active:scale-95 text-white shadow-orange-500/30 hover:shadow-orange-500/50 hover:shadow-xl'
+                          ? 'bg-success hover:bg-success/90 text-success-foreground'
+                          : 'bg-accent hover:bg-accent/90 text-accent-foreground'
                     }`}
                     onClick={() => handleEntryExitClick(btn.type)}
                     disabled={loading !== null || alreadyClocked || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
@@ -815,18 +818,18 @@ export default function ClockIn() {
             <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4">
               {/* Global Summary */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-success/10 text-center">
-                  <p className="text-xs text-muted-foreground">Total a Receber</p>
-                  <p className="text-lg font-bold text-success">
+                <div className="p-4 rounded-lg border border-success/20 bg-success/5 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total a Receber</p>
+                  <p className="text-2xl font-bold text-success tabular-nums">
                     R$ {anotacoes
                       .filter(a => a.status === 'a_pagar')
                       .reduce((sum, a) => sum + Number(a.valor), 0)
                       .toFixed(2)}
                   </p>
                 </div>
-                <div className="p-3 rounded-lg bg-muted text-center">
-                  <p className="text-xs text-muted-foreground">Total Recebido</p>
-                  <p className="text-lg font-bold text-muted-foreground">
+                <div className="p-4 rounded-lg border border-border/60 bg-muted/40 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total Recebido</p>
+                  <p className="text-2xl font-bold text-muted-foreground tabular-nums">
                     R$ {anotacoes
                       .filter(a => a.status === 'pago')
                       .reduce((sum, a) => sum + Number(a.valor), 0)
@@ -900,11 +903,11 @@ export default function ClockIn() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold">
+                              <span className="text-sm font-bold tabular-nums">
                                 R$ {Number(anotacao.valor).toFixed(2)}
                               </span>
-                              <Badge 
-                                variant={anotacao.status === 'pago' ? 'default' : 'secondary'} 
+                              <Badge
+                                variant={anotacao.status === 'pago' ? 'secondary' : 'warning'}
                                 className="text-[10px] px-1.5 py-0.5"
                               >
                                 {anotacao.status === 'pago' ? 'Pago' : 'A receber'}

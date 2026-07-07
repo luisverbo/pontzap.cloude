@@ -8,6 +8,7 @@ import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CLOCK_TYPE_LABELS, ClockType } from '@/types';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -239,28 +240,39 @@ export default function Dashboard() {
     {
       title: 'Funcionários',
       value: stats.totalEmployees,
-      icon: <Users className="h-6 w-6" />,
+      icon: <Users className="h-5 w-5" />,
       color: 'text-primary',
-      bgColor: 'bg-[hsl(var(--pastel-blue))]',
+      bgColor: 'bg-primary/10',
     },
     {
       title: 'Batidas Hoje',
       value: stats.clockInsToday,
-      icon: <Clock className="h-6 w-6" />,
+      icon: <Clock className="h-5 w-5" />,
       color: 'text-success',
-      bgColor: 'bg-[hsl(var(--pastel-green))]',
+      bgColor: 'bg-success/10',
     },
   ];
 
-  const punctualityRate = stats.totalEmployees > 0 
-    ? Math.round((onTimeCount / stats.totalEmployees) * 100) 
+  const punctualityRate = stats.totalEmployees > 0
+    ? Math.round((onTimeCount / stats.totalEmployees) * 100)
     : 0;
 
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Skeleton className="h-72 rounded-xl" />
+            <Skeleton className="h-72 rounded-xl" />
+          </div>
         </div>
       </MainLayout>
     );
@@ -272,7 +284,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="space-y-1">
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Olá, {profile?.name?.split(' ')[0] || 'Usuário'}! 👋
+            Olá, {profile?.name?.split(' ')[0] || 'Usuário'}
           </h1>
           <p className="text-muted-foreground">
             Acompanhe o controle de ponto da sua empresa
@@ -282,18 +294,18 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           {statCards.map((stat, index) => (
-            <Card 
-              key={stat.title} 
-              className="card-modern animate-slide-up overflow-hidden" 
+            <Card
+              key={stat.title}
+              className="card-modern animate-slide-up overflow-hidden"
               style={{ animationDelay: `${index * 80}ms` }}
             >
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground font-medium">{stat.title}</p>
-                    <p className="text-3xl font-bold mt-1 text-foreground">{stat.value}</p>
+                    <p className="text-3xl font-bold mt-1 text-foreground tabular-nums">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-xl ${stat.bgColor} ${stat.color}`}>
+                  <div className={`p-2.5 rounded-lg ${stat.bgColor} ${stat.color}`}>
                     {stat.icon}
                   </div>
                 </div>
@@ -358,40 +370,40 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-1">
                 {/* On time */}
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-[hsl(var(--pastel-green))] border border-success/20">
-                  <div className="p-2 rounded-lg bg-success/20">
-                    <CheckCircle2 className="h-6 w-6 text-success" />
+                <div className="flex items-center gap-3 py-3 border-b border-border/50">
+                  <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4.5 w-4.5 text-success" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">{onTimeCount} funcionário{onTimeCount !== 1 ? 's' : ''}</p>
+                    <p className="font-semibold text-foreground tabular-nums">{onTimeCount} funcionário{onTimeCount !== 1 ? 's' : ''}</p>
                     <p className="text-sm text-muted-foreground">Bateram ponto hoje</p>
                   </div>
                 </div>
 
                 {/* Pending */}
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-[hsl(var(--pastel-yellow))] border border-warning/20">
-                  <div className="p-2 rounded-lg bg-warning/20">
-                    <AlertTriangle className="h-6 w-6 text-warning" />
+                <div className="flex items-center gap-3 py-3 border-b border-border/50">
+                  <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-4.5 w-4.5 text-warning" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">{pendingCount} funcionário{pendingCount !== 1 ? 's' : ''}</p>
+                    <p className="font-semibold text-foreground tabular-nums">{pendingCount} funcionário{pendingCount !== 1 ? 's' : ''}</p>
                     <p className="text-sm text-muted-foreground">Aguardando batida de ponto</p>
                   </div>
                 </div>
 
                 {/* Punctuality rate */}
-                <div className="p-4 rounded-xl bg-[hsl(var(--pastel-blue))] border border-primary/20">
+                <div className="pt-4">
                   <p className="text-sm text-muted-foreground mb-3">Taxa de pontualidade</p>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full transition-all duration-700 ease-out" 
-                        style={{ width: `${punctualityRate}%` }} 
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
+                        style={{ width: `${punctualityRate}%` }}
                       />
                     </div>
-                    <span className="font-bold text-primary text-lg">{punctualityRate}%</span>
+                    <span className="font-bold text-primary text-lg tabular-nums">{punctualityRate}%</span>
                   </div>
                 </div>
               </div>

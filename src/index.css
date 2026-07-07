@@ -16,9 +16,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 14%;
 
-    --primary: 142 63% 40%; /* Green - same as landing page #25D366 */
+    --primary: 152 32% 30%; /* Deep contained green - professional, not WhatsApp-bright */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 63% 50%;
+    --primary-glow: 152 32% 40%;
 
     --secondary: 220 14% 96%; /* Soft gray */
     --secondary-foreground: 222 47% 14%;
@@ -29,7 +29,7 @@
     --accent: 16 85% 57%; /* Warm coral */
     --accent-foreground: 0 0% 100%;
 
-    --success: 152 70% 40%; /* Fresh green */
+    --success: 142 63% 38%; /* Distinct from primary - reserved for positive states only */
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%; /* Amber */
@@ -40,31 +40,31 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 142 63% 40%;
+    --ring: 152 32% 30%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
     /* Sidebar - Light Theme */
-    --sidebar-background: 220 22% 93%;
+    --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 222 47% 18%;
-    --sidebar-primary: 142 63% 40%;
+    --sidebar-primary: 152 32% 30%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 22% 88%;
+    --sidebar-accent: 220 16% 92%;
     --sidebar-accent-foreground: 222 47% 14%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 142 63% 40%;
+    --sidebar-ring: 152 32% 30%;
     --sidebar-muted: 215 16% 52%;
 
-    /* Pastel Accents */
-    --pastel-green: 152 50% 92%;
-    --pastel-yellow: 48 80% 92%;
-    --pastel-blue: 142 55% 92%;
-    --pastel-red: 0 60% 94%;
+    /* Small icon-chip tints only — never a full-card background */
+    --pastel-green: 152 40% 94%;
+    --pastel-yellow: 42 55% 92%;
+    --pastel-blue: 152 25% 93%;
+    --pastel-red: 0 45% 95%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(142, 63%, 38%), hsl(142, 63%, 48%));
+    /* Gradients — used sparingly (landing/marketing surfaces only) */
+    --gradient-primary: linear-gradient(135deg, hsl(152, 32%, 28%), hsl(152, 32%, 36%));
     --gradient-accent: linear-gradient(135deg, hsl(16, 85%, 57%), hsl(28, 90%, 55%));
-    --gradient-hero: linear-gradient(135deg, hsl(142, 63%, 36%) 0%, hsl(150, 60%, 42%) 50%, hsl(142, 63%, 48%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(152, 32%, 26%) 0%, hsl(152, 28%, 32%) 50%, hsl(152, 32%, 36%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(220, 20%, 99%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(220, 20%, 97%) 0%, hsl(220, 14%, 95%) 100%);
 
@@ -73,8 +73,8 @@
     --shadow-md: 0 4px 6px -1px hsl(222, 47%, 14%, 0.05), 0 2px 4px -2px hsl(222, 47%, 14%, 0.05);
     --shadow-lg: 0 10px 25px -5px hsl(222, 47%, 14%, 0.08), 0 8px 10px -6px hsl(222, 47%, 14%, 0.04);
     --shadow-xl: 0 25px 50px -12px hsl(222, 47%, 14%, 0.15);
-    --shadow-glow: 0 0 25px hsl(142, 63%, 50%, 0.25);
-    --shadow-accent-glow: 0 0 25px hsl(16, 85%, 57%, 0.3);
+    --shadow-glow: 0 0 20px hsl(152, 32%, 30%, 0.15);
+    --shadow-accent-glow: 0 0 20px hsl(16, 85%, 57%, 0.2);
     --shadow-card: 0 1px 3px hsl(222, 47%, 14%, 0.04), 0 4px 12px hsl(222, 47%, 14%, 0.06);
 
     /* Transitions */
@@ -94,9 +94,9 @@
     --popover: 222 47% 11%;
     --popover-foreground: 214 32% 91%;
 
-    --primary: 142 63% 50%; /* Brighter green for dark mode */
+    --primary: 152 30% 48%; /* Contained green, brightened just enough for dark bg */
     --primary-foreground: 222 47% 5%;
-    --primary-glow: 142 63% 58%;
+    --primary-glow: 152 30% 55%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 214 32% 91%;
@@ -107,7 +107,7 @@
     --accent: 16 85% 57%;
     --accent-foreground: 0 0% 100%;
 
-    --success: 152 70% 45%;
+    --success: 142 55% 48%;
     --success-foreground: 222 47% 5%;
 
     --warning: 38 92% 50%;
@@ -118,28 +118,28 @@
 
     --border: 217 33% 20%;
     --input: 217 33% 20%;
-    --ring: 142 63% 50%;
+    --ring: 152 30% 48%;
 
     /* Sidebar - Dark Theme */
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 214 32% 91%;
-    --sidebar-primary: 142 63% 50%;
+    --sidebar-primary: 152 30% 48%;
     --sidebar-primary-foreground: 222 47% 5%;
     --sidebar-accent: 217 33% 15%;
     --sidebar-accent-foreground: 214 32% 91%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 142 63% 50%;
+    --sidebar-ring: 152 30% 48%;
     --sidebar-muted: 215 20% 50%;
 
-    /* Pastel Accents - Darker versions */
-    --pastel-green: 152 40% 18%;
-    --pastel-yellow: 48 50% 15%;
-    --pastel-blue: 142 40% 18%;
-    --pastel-red: 0 40% 18%;
+    /* Small icon-chip tints only — never a full-card background */
+    --pastel-green: 152 30% 16%;
+    --pastel-yellow: 42 40% 15%;
+    --pastel-blue: 152 20% 16%;
+    --pastel-red: 0 35% 17%;
 
-    /* Gradients - Dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(142, 63%, 45%), hsl(142, 63%, 55%));
-    --gradient-hero: linear-gradient(135deg, hsl(142, 63%, 38%) 0%, hsl(150, 60%, 45%) 50%, hsl(142, 63%, 52%) 100%);
+    /* Gradients - Dark mode (used sparingly) */
+    --gradient-primary: linear-gradient(135deg, hsl(152, 30%, 42%), hsl(152, 30%, 52%));
+    --gradient-hero: linear-gradient(135deg, hsl(152, 30%, 34%) 0%, hsl(152, 26%, 40%) 50%, hsl(152, 30%, 48%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(222, 47%, 12%) 0%, hsl(222, 47%, 10%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(222, 47%, 5%) 0%, hsl(222, 47%, 4%) 100%);
 
@@ -148,7 +148,7 @@
     --shadow-md: 0 4px 6px -1px hsl(0, 0%, 0%, 0.3), 0 2px 4px -2px hsl(0, 0%, 0%, 0.2);
     --shadow-lg: 0 10px 25px -5px hsl(0, 0%, 0%, 0.4), 0 8px 10px -6px hsl(0, 0%, 0%, 0.2);
     --shadow-xl: 0 25px 50px -12px hsl(0, 0%, 0%, 0.5);
-    --shadow-glow: 0 0 30px hsl(142, 63%, 50%, 0.35);
+    --shadow-glow: 0 0 24px hsl(152, 30%, 48%, 0.25);
     --shadow-card: 0 0 0 1px hsl(217, 33%, 18%), 0 4px 20px hsl(0, 0%, 0%, 0.25);
   }
 }
@@ -221,13 +221,11 @@
   /* Sidebar Styles */
   .sidebar-modern {
     @apply bg-sidebar border-r border-sidebar-border;
-    border-top: 3px solid hsl(142, 63%, 40%);
-    box-shadow: 3px 0 16px hsl(220, 20%, 70%, 0.35);
+    box-shadow: var(--shadow-sm);
   }
 
   .dark .sidebar-modern {
-    border-top: 3px solid hsl(142, 63%, 50%);
-    box-shadow: 4px 0 32px hsl(0, 0%, 0%, 0.3);
+    box-shadow: 2px 0 16px hsl(0, 0%, 0%, 0.2);
   }
 }
 

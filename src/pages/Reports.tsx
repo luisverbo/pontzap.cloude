@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -864,21 +865,21 @@ export default function Reports() {
                             </td>
                             <td className="text-center p-3">
                               {emp.compensationMode === 'time_off' ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                                  🏖️ Banco de horas
-                                </span>
+                                <Badge variant="info" className="text-xs font-normal">
+                                  Banco de horas
+                                </Badge>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                  💰 Pagamento
-                                </span>
+                                <Badge variant="success" className="text-xs font-normal">
+                                  Pagamento
+                                </Badge>
                               )}
                             </td>
                             <td className="text-right p-3">
                               {emp.compensationMode === 'time_off' ? (
                                 emp.eligibleTimeOffDays > 0 ? (
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 font-medium">
-                                    🎉 {emp.eligibleTimeOffDays} folga{emp.eligibleTimeOffDays > 1 ? 's' : ''} disponível
-                                  </span>
+                                  <Badge variant="warning" className="text-xs font-medium">
+                                    {emp.eligibleTimeOffDays} folga{emp.eligibleTimeOffDays > 1 ? 's' : ''} disponível
+                                  </Badge>
                                 ) : (
                                   <span className="text-muted-foreground text-xs">
                                     {formatMinutesToHours(emp.accumulatedOvertimeMinutes)} acumuladas
@@ -948,17 +949,20 @@ export default function Reports() {
                             <td className="text-center p-3 text-sm font-mono">{alert.scheduled_time?.substring(0, 5)}</td>
                             <td className="text-center p-3">
                               {alert.response_type ? (
-                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                  alert.response_type === 'on_way' 
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                                    : alert.response_type === 'will_be_late'
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                }`}>
-                                  {alert.response_type === 'on_way' && '🚗 Próximo'}
-                                  {alert.response_type === 'will_be_late' && '⏰ Atrasado'}
-                                  {alert.response_type === 'absent' && '❌ Falta'}
-                                </span>
+                                <Badge
+                                  variant={
+                                    alert.response_type === 'on_way'
+                                      ? 'info'
+                                      : alert.response_type === 'will_be_late'
+                                      ? 'warning'
+                                      : 'destructive'
+                                  }
+                                  className="text-xs font-medium"
+                                >
+                                  {alert.response_type === 'on_way' && 'Próximo'}
+                                  {alert.response_type === 'will_be_late' && 'Atrasado'}
+                                  {alert.response_type === 'absent' && 'Falta'}
+                                </Badge>
                               ) : (
                                 <span className="text-xs text-muted-foreground">Sem resposta</span>
                               )}
