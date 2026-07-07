@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -677,9 +678,13 @@ export default function EspelhoPonto() {
 
         {/* Records Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <Card variant="elevated">
+            <CardContent className="p-4 space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 rounded-md" />
+              ))}
+            </CardContent>
+          </Card>
         ) : dailyRecords.length > 0 ? (
           <Card variant="elevated">
             <CardHeader>
@@ -710,35 +715,35 @@ export default function EspelhoPonto() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left p-2 font-medium text-muted-foreground">Data</th>
-                      <th className="text-left p-2 font-medium text-muted-foreground">Dia</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">Entrada</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">Saída Almoço</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">Retorno Almoço</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">Saída</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">Trabalhado</th>
-                      <th className="text-center p-2 font-medium text-muted-foreground">H. Extra</th>
-                      <th className="text-left p-2 font-medium text-muted-foreground">Observações</th>
+                      <th className="text-left p-2 font-medium text-muted-foreground sticky top-0 bg-card">Data</th>
+                      <th className="text-left p-2 font-medium text-muted-foreground sticky top-0 bg-card">Dia</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">Entrada</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">Saída Almoço</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">Retorno Almoço</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">Saída</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">Trabalhado</th>
+                      <th className="text-right p-2 font-medium text-muted-foreground sticky top-0 bg-card">H. Extra</th>
+                      <th className="text-left p-2 font-medium text-muted-foreground sticky top-0 bg-card">Observações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dailyRecords.map((record, index) => {
                       const isWeekendDay = record.dayOfWeek.includes('sábado') || record.dayOfWeek.includes('domingo');
                       return (
-                        <tr 
+                        <tr
                           key={index}
                           className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${
-                            isWeekendDay ? 'bg-secondary/20 text-muted-foreground' : index % 2 === 0 ? 'bg-secondary/10' : ''
+                            isWeekendDay ? 'bg-secondary/20 text-muted-foreground' : ''
                           }`}
                         >
-                          <td className="p-2 font-mono text-xs">{record.date}</td>
+                          <td className="p-2 font-mono tabular-nums text-xs">{record.date}</td>
                           <td className="p-2 capitalize text-xs">{record.dayOfWeek}</td>
-                          <td className="text-center p-2 font-mono">{record.entry || '-'}</td>
-                          <td className="text-center p-2 font-mono">{record.lunchOut || '-'}</td>
-                          <td className="text-center p-2 font-mono">{record.lunchIn || '-'}</td>
-                          <td className="text-center p-2 font-mono">{record.exit || '-'}</td>
-                          <td className="text-center p-2 font-mono font-medium">{record.totalWorked}</td>
-                          <td className="text-center p-2 font-mono">
+                          <td className="text-right p-2 font-mono tabular-nums">{record.entry || '-'}</td>
+                          <td className="text-right p-2 font-mono tabular-nums">{record.lunchOut || '-'}</td>
+                          <td className="text-right p-2 font-mono tabular-nums">{record.lunchIn || '-'}</td>
+                          <td className="text-right p-2 font-mono tabular-nums">{record.exit || '-'}</td>
+                          <td className="text-right p-2 font-mono tabular-nums font-medium">{record.totalWorked}</td>
+                          <td className="text-right p-2 font-mono tabular-nums">
                             {record.overtime !== '-' ? (
                               <span className="text-primary font-medium">{record.overtime}</span>
                             ) : (

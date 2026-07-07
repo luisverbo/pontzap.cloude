@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
+/* Fonts are loaded non-blocking from index.html (Inter, Space Grotesk, JetBrains Mono) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -161,7 +160,19 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv05", "ss01";
   }
+
+  /* Titles use the display face */
+  h1, h2, h3 {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  /* Locked-width digits for time & money columns */
+  .tnum { font-variant-numeric: tabular-nums; }
 }
 
 @layer components {
@@ -191,14 +202,11 @@
     box-shadow: var(--shadow-accent-glow);
   }
 
-  /* Modern Card Styles */
+  /* Legacy alias — kept in sync with the Card component's default variant so the
+     two never disagree on radius/border. Prefer <Card /> in new code. */
   .card-modern {
-    @apply bg-card rounded-xl border border-border/50 transition-all duration-200;
+    @apply bg-card rounded-lg border border-border/60 transition-all duration-200;
     box-shadow: var(--shadow-card);
-  }
-
-  .card-modern:hover {
-    box-shadow: var(--shadow-lg);
   }
 
   /* Pastel Status Cards */

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -688,8 +689,13 @@ export default function Reports() {
         </Card>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-lg" />
+              ))}
+            </div>
+            <Skeleton className="h-72 rounded-lg" />
           </div>
         ) : reportData ? (
           <>
@@ -819,20 +825,20 @@ export default function Reports() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">Funcionário</th>
-                          <th className="text-center p-3 text-sm font-medium text-muted-foreground">Batidas</th>
-                          <th className="text-center p-3 text-sm font-medium text-muted-foreground">Atrasos</th>
-                          <th className="text-center p-3 text-sm font-medium text-muted-foreground">H. Normais</th>
-                          <th className="text-center p-3 text-sm font-medium text-muted-foreground">H. Extras</th>
-                          <th className="text-center p-3 text-sm font-medium text-muted-foreground">Compensação</th>
-                          <th className="text-right p-3 text-sm font-medium text-muted-foreground">Custo/Folga</th>
+                          <th className="text-left p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">Funcionário</th>
+                          <th className="text-right p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">Batidas</th>
+                          <th className="text-right p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">Atrasos</th>
+                          <th className="text-right p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">H. Normais</th>
+                          <th className="text-right p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">H. Extras</th>
+                          <th className="text-center p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">Compensação</th>
+                          <th className="text-right p-3 text-sm font-medium text-muted-foreground sticky top-0 bg-card">Custo/Folga</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reportData.byEmployee.map((emp, index) => (
-                          <tr 
+                          <tr
                             key={emp.employeeId}
-                            className={`border-b border-border/50 hover:bg-secondary/30 transition-colors ${index % 2 === 0 ? 'bg-secondary/10' : ''}`}
+                            className="border-b border-border/50 hover:bg-secondary/30 transition-colors"
                           >
                             <td className="p-3">
                               <div className="flex items-center gap-3">
@@ -845,18 +851,18 @@ export default function Reports() {
                                 </div>
                               </div>
                             </td>
-                            <td className="text-center p-3 font-medium">{emp.clockIns}</td>
-                            <td className="text-center p-3">
+                            <td className="text-right p-3 font-mono tabular-nums font-medium">{emp.clockIns}</td>
+                            <td className="text-right p-3 font-mono tabular-nums">
                               {emp.lateCount > 0 ? (
                                 <span className="text-warning font-medium">{emp.lateCount}</span>
                               ) : (
                                 <span className="text-muted-foreground">0</span>
                               )}
                             </td>
-                            <td className="text-center p-3 text-muted-foreground">
+                            <td className="text-right p-3 font-mono tabular-nums text-muted-foreground">
                               {emp.regularHours.toFixed(1)}h
                             </td>
-                            <td className="text-center p-3">
+                            <td className="text-right p-3 font-mono tabular-nums">
                               {emp.overtimeMinutes > 0 ? (
                                 <span className="font-medium text-primary">{formatMinutesToHours(emp.overtimeMinutes)}</span>
                               ) : (
@@ -886,7 +892,7 @@ export default function Reports() {
                                   </span>
                                 )
                               ) : emp.overtimeCost > 0 ? (
-                                <span className="font-medium text-destructive">
+                                <span className="font-medium text-destructive font-mono tabular-nums">
                                   R$ {emp.overtimeCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                               ) : (

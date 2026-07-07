@@ -820,7 +820,7 @@ export default function ClockIn() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-lg border border-success/20 bg-success/5 text-center">
                   <p className="text-xs text-muted-foreground mb-1">Total a Receber</p>
-                  <p className="text-2xl font-bold text-success tabular-nums">
+                  <p className="text-2xl font-bold text-success font-mono tabular-nums">
                     R$ {anotacoes
                       .filter(a => a.status === 'a_pagar')
                       .reduce((sum, a) => sum + Number(a.valor), 0)
@@ -829,7 +829,7 @@ export default function ClockIn() {
                 </div>
                 <div className="p-4 rounded-lg border border-border/60 bg-muted/40 text-center">
                   <p className="text-xs text-muted-foreground mb-1">Total Recebido</p>
-                  <p className="text-2xl font-bold text-muted-foreground tabular-nums">
+                  <p className="text-2xl font-bold text-muted-foreground font-mono tabular-nums">
                     R$ {anotacoes
                       .filter(a => a.status === 'pago')
                       .reduce((sum, a) => sum + Number(a.valor), 0)
@@ -903,7 +903,7 @@ export default function ClockIn() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold tabular-nums">
+                              <span className="text-sm font-bold font-mono tabular-nums">
                                 R$ {Number(anotacao.valor).toFixed(2)}
                               </span>
                               <Badge

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -181,8 +182,10 @@ export default function HourBank() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 rounded-lg" />
+            ))}
           </div>
         ) : emps.length === 0 ? (
           <Card><CardContent className="p-12 text-center text-muted-foreground">Nenhum funcionário</CardContent></Card>
