@@ -113,11 +113,18 @@ serve(async (req: Request): Promise<Response> => {
       return ok();
     }
 
-    const { data: employee } = await supabase
+    // Use a plain select (not maybeSingle) so a duplicate employees row for the
+    // same user never silently fails the lookup — prefer the active one.
+    const { data: employeeRows, error: employeeQueryError } = await supabase
       .from("employees")
       .select("id, company_id, type, is_active")
-      .eq("user_id", profile.id)
-      .maybeSingle();
+      .eq("user_id", profile.id);
+
+    if (employeeQueryError) {
+      console.error("Employee lookup error:", employeeQueryError);
+    }
+    const employee =
+      (employeeRows || []).find((e: any) => e.is_active) || (employeeRows || [])[0] || null;
 
     if (!employee) {
       await sendWhatsApp(
