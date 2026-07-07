@@ -65,14 +65,21 @@ async function sendWhatsApp(supabase: any, phone: string, message: string) {
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const ok = () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  // Feature flag: set WHATSAPP_CLOCKIN_ENABLED=true in the Supabase secrets to
+  // turn this back on. Disabled by default while the phone-matching flow is
+  // reworked — always returns 200 so Evolution never retry-storms.
+  if (Deno.env.get("WHATSAPP_CLOCKIN_ENABLED") !== "true") {
+    return ok();
+  }
+
   // Shared-secret check (the webhook URL carries ?token=...)
   const url = new URL(req.url);
   const secret = Deno.env.get("WHATSAPP_WEBHOOK_TOKEN");
   if (secret && url.searchParams.get("token") !== secret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
   }
-
-  const ok = () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     const payload = await req.json();
