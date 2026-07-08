@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
+import { useSelfieCapture } from '@/hooks/useSelfieCapture';
 import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -88,6 +89,8 @@ export default function ClockIn() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [employeeData, setEmployeeData] = useState<{ id: string; locationId: string | null; companyId: string | null; type: string; valorDiaria: number | null } | null>(null);
+  const [requireClockPhoto, setRequireClockPhoto] = useState(false);
+  const { capture: captureSelfie, overlay: selfieOverlay } = useSelfieCapture();
   const [loadingEmployee, setLoadingEmployee] = useState(true);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [pendingClockType, setPendingClockType] = useState<ClockType | null>(null);
@@ -272,6 +275,9 @@ export default function ClockIn() {
             employee_locations(
               location_id,
               is_primary
+            ),
+            companies(
+              require_clock_photo
             )
           `)
           .eq('user_id', user.id)
@@ -290,6 +296,7 @@ export default function ClockIn() {
             type: (employee as any).type || 'fixed',
             valorDiaria: (employee as any).valor_diaria ?? null,
           });
+          setRequireClockPhoto(!!(employee as any).companies?.require_clock_photo);
         }
       } catch (error) {
         console.error('Error fetching employee data:', error);
@@ -336,10 +343,14 @@ export default function ClockIn() {
       return;
     }
 
+    // Capture the selfie INSIDE the tap gesture (iOS requirement) when the company
+    // requires it. captureSelfie() fires getUserMedia synchronously, then awaits.
+    const photo = requireClockPhoto ? await captureSelfie() : undefined;
+
     setLoading(type);
 
     const locationId = employeeData?.locationId || null;
-    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng);
+    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng, photo || undefined);
 
     if (result.success && result.recordId) {
       if (result.offline) {
@@ -354,8 +365,9 @@ export default function ClockIn() {
     setLoading(null);
   };
 
-  // GPS fallback for entry/exit
-  const handleGPSFallback = async (type: ClockType) => {
+  // GPS fallback for entry/exit. The selfie (when required) is captured inside the
+  // QR scanner's tap gesture and passed in here.
+  const handleGPSFallback = async (type: ClockType, photo?: string) => {
     if (!location) {
       toast.error('Localização não disponível. Verifique as permissões do GPS.');
       return;
@@ -370,7 +382,7 @@ export default function ClockIn() {
     setLoading(type);
 
     const locationId = employeeData?.locationId || null;
-    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng);
+    const result = await clockIn(type, locationId!, 'gps', location.lat, location.lng, photo || undefined);
 
     if (result.success && result.recordId) {
       if (result.offline) {
@@ -691,10 +703,14 @@ export default function ClockIn() {
             onClockIn={handleQRClockIn}
             disabledTypes={getDisabledClockTypes()}
             defaultClockType={pendingClockType}
-            onGPSFallback={pendingClockType ? () => handleGPSFallback(pendingClockType) : undefined}
+            onGPSFallback={pendingClockType ? (photo?: string) => handleGPSFallback(pendingClockType, photo) : undefined}
             hasLocation={!!location}
+            requirePhoto={requireClockPhoto}
           />
         )}
+
+        {/* Selfie overlay for the direct (lunch) clock-in buttons */}
+        {selfieOverlay}
 
         {/* Comprovante de Ponto (Portaria 671) */}
         <ClockReceiptDialog

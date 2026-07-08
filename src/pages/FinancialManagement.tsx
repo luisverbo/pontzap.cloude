@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, parseISO, subMonths, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -79,6 +81,7 @@ const EXPENSE_CHART_COLORS = ['hsl(0, 84%, 60%)', 'hsl(15, 90%, 55%)', 'hsl(25, 
 type FilterPeriod = 'month' | 'quarter' | 'year' | 'all' | 'custom' | 'future';
 
 export default function FinancialManagement() {
+  const { companyStatus } = useAuth();
   const [entries, setEntries] = useState<FinancialEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -108,6 +111,18 @@ export default function FinancialManagement() {
     notes: '',
     notification_days: 1,
   });
+
+  const resolveCompanyId = async (): Promise<string | null> => {
+    const imp = getImpersonatedCompanyId();
+    if (imp) return imp;
+    if (companyStatus?.id) return companyStatus.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: emp } = await supabase.from('employees').select('company_id').eq('user_id', user.id).maybeSingle();
+    if (emp?.company_id) return emp.company_id;
+    const { data: owned } = await supabase.from('companies').select('id').eq('admin_user_id', user.id).maybeSingle();
+    return owned?.id ?? null;
+  };
 
   useEffect(() => {
     fetchEntries();
@@ -163,11 +178,14 @@ export default function FinancialManagement() {
         if (error) throw error;
         toast.success('Entrada atualizada com sucesso');
       } else {
-        // When creating new entry, set initial status
+        // When creating new entry, set initial status. Stamp company_id so the
+        // RLS company check passes (the trigger also fills it server-side as a fallback).
+        const companyId = await resolveCompanyId();
         const { error } = await supabase
           .from('financial_entries')
           .insert({
             ...baseData,
+            company_id: companyId,
             notification_sent: false,
             status: 'pending',
           });
@@ -178,9 +196,9 @@ export default function FinancialManagement() {
       setDialogOpen(false);
       resetForm();
       fetchEntries();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving entry:', error);
-      toast.error('Erro ao salvar entrada');
+      toast.error(error?.message ? `Erro ao salvar: ${error.message}` : 'Erro ao salvar entrada');
     } finally {
       setSaving(false);
     }

@@ -6,6 +6,7 @@ import { X, Camera, Loader2, QrCode, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
+import { useSelfieCapture } from '@/hooks/useSelfieCapture';
 
 interface QRCodeScannerProps {
   onScan: (locationId: string, locationName: string) => void;
@@ -13,18 +14,21 @@ interface QRCodeScannerProps {
   onClockIn: (type: ClockType, locationId: string, photo?: string) => Promise<{ success: boolean }>;
   disabledTypes: ClockType[];
   defaultClockType?: ClockType | null;
-  onGPSFallback?: () => void;
+  onGPSFallback?: (photo?: string) => void;
   hasLocation?: boolean;
+  /** When true, capture a selfie before the punch (company anti-fraud setting). */
+  requirePhoto?: boolean;
 }
 
-export function QRCodeScanner({ 
-  onScan, 
-  onClose, 
-  onClockIn, 
-  disabledTypes, 
+export function QRCodeScanner({
+  onScan,
+  onClose,
+  onClockIn,
+  disabledTypes,
   defaultClockType,
   onGPSFallback,
-  hasLocation = false
+  hasLocation = false,
+  requirePhoto = false
 }: QRCodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -33,111 +37,17 @@ export function QRCodeScanner({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const photoResolveRef = useRef<((v: string | null) => void) | null>(null);
-  const [capturingPhoto, setCapturingPhoto] = useState(false);
-  const [photoCameraReady, setPhotoCameraReady] = useState(false);
-  const [photoCameraError, setPhotoCameraError] = useState<string | null>(null);
-
-  const stopPhotoStream = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const attachStream = (stream: MediaStream) => {
-    streamRef.current = stream;
-    const attach = () => {
-      const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        video.play().catch(() => {});
-      } else {
-        setTimeout(attach, 60);
-      }
-    };
-    attach();
-  };
-
-  // Show an in-page front-camera preview; resolve with a compressed selfie when
-  // the user taps Capturar (or null if they skip). CRITICAL for iOS: getUserMedia
-  // is invoked SYNCHRONOUSLY here, directly in the button-tap gesture — any await
-  // before it loses the gesture and the camera never opens. The QR scanner camera
-  // is already stopped by the time these buttons are shown.
-  const startPhotoCapture = (): Promise<string | null> => {
-    setPhotoCameraError(null);
-    setPhotoCameraReady(false);
-    setCapturingPhoto(true);
-
-    let streamPromise: Promise<MediaStream>;
-    try {
-      streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-    } catch (e) {
-      streamPromise = Promise.reject(e);
-    }
-
-    return new Promise((resolve) => {
-      photoResolveRef.current = resolve;
-      streamPromise
-        .then((stream) => attachStream(stream))
-        .catch(async () => {
-          // Fallback: some iOS setups reject the facingMode constraint
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            attachStream(stream);
-          } catch (e2) {
-            console.error('Selfie camera error:', e2);
-            setPhotoCameraError('Não foi possível abrir a câmera. Verifique a permissão de câmera do navegador.');
-          }
-        });
-    });
-  };
-
-  const captureFrame = () => {
-    const video = videoRef.current;
-    const resolve = photoResolveRef.current;
-    photoResolveRef.current = null;
-    let dataUrl: string | null = null;
-    if (video && video.videoWidth > 0) {
-      const maxDim = 640;
-      const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      }
-    }
-    stopPhotoStream();
-    setCapturingPhoto(false);
-    setPhotoCameraReady(false);
-    resolve?.(dataUrl);
-  };
-
-  const skipPhoto = () => {
-    const resolve = photoResolveRef.current;
-    photoResolveRef.current = null;
-    stopPhotoStream();
-    setCapturingPhoto(false);
-    setPhotoCameraReady(false);
-    setPhotoCameraError(null);
-    resolve?.(null);
-  };
+  const { capture: startPhotoCapture, overlay: selfieOverlay } = useSelfieCapture();
 
   // Auto-start camera when component mounts
   useEffect(() => {
     const timer = setTimeout(() => {
       startScanner();
     }, 300);
-    
+
     return () => {
       clearTimeout(timer);
       stopScanner();
-      stopPhotoStream();
     };
   }, []);
 
@@ -236,9 +146,9 @@ export function QRCodeScanner({
     const locId = locationId || scannedLocation?.id;
     if (!locId) return;
 
-    // Capture a selfie (in-page front camera). Auto-clock (locationId passed
-    // from a decoded QR, no tap) skips it.
-    const photo = locationId ? null : await startPhotoCapture();
+    // Capture a selfie (in-page front camera) only when the company requires it.
+    // Auto-clock (locationId passed from a decoded QR, no tap) always skips it.
+    const photo = (locationId || !requirePhoto) ? null : await startPhotoCapture();
 
     setLoading(type);
     const result = await onClockIn(type, locId, photo || undefined);
@@ -258,48 +168,7 @@ export function QRCodeScanner({
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in overflow-auto">
       {/* Selfie capture overlay (in-page front camera) */}
-      {capturingPhoto && (
-        <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-4">
-          <p className="text-white text-sm mb-3">Confirme sua identidade — tire uma selfie</p>
-          <div className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              autoPlay
-              onCanPlay={() => setPhotoCameraReady(true)}
-              onLoadedMetadata={() => setPhotoCameraReady(true)}
-              className="w-full h-full object-cover"
-              style={{ transform: 'scaleX(-1)' }}
-            />
-            {!photoCameraReady && !photoCameraError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80">
-                <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                <span className="text-sm">Abrindo câmera...</span>
-              </div>
-            )}
-            {photoCameraError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                <Camera className="h-8 w-8 text-white/60 mb-2" />
-                <span className="text-sm text-white/80">{photoCameraError}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex gap-3 mt-5 w-full max-w-sm">
-            <Button variant="outline" className="flex-1 h-12 bg-slate-800 border-slate-700 text-white hover:bg-slate-700" onClick={skipPhoto}>
-              {photoCameraError ? 'Continuar sem foto' : 'Pular'}
-            </Button>
-            <Button
-              className="flex-1 h-12 bg-success hover:bg-success/90 text-white disabled:opacity-50"
-              onClick={captureFrame}
-              disabled={!photoCameraReady}
-            >
-              <Camera className="h-5 w-5 mr-2" />
-              Capturar
-            </Button>
-          </div>
-        </div>
-      )}
+      {selfieOverlay}
 
       <div className="container max-w-md mx-auto px-4 py-4 sm:py-6 min-h-full flex flex-col">
         {/* Header */}
@@ -357,9 +226,14 @@ export function QRCodeScanner({
                     <p className="text-center text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
                       Problemas com o QR Code?
                     </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={onGPSFallback}
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        // Capture the selfie inside this tap gesture when required,
+                        // then hand the punch off to the GPS fallback handler.
+                        const photo = requirePhoto ? await startPhotoCapture() : undefined;
+                        onGPSFallback?.(photo || undefined);
+                      }}
                       className="w-full h-12 sm:h-11 bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white border-0 shadow-md touch-manipulation text-sm sm:text-base"
                       disabled={!hasLocation}
                     >

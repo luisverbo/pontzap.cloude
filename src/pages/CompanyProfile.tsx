@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { Switch } from '@/components/ui/switch';
-import { Building2, Loader2, Save, MessageCircle } from 'lucide-react';
+import { Building2, Loader2, Save, MessageCircle, Camera } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function CompanyProfile() {
@@ -26,6 +26,30 @@ export default function CompanyProfile() {
   const [summarySaving, setSummarySaving] = useState(false);
   const [summaryConfigId, setSummaryConfigId] = useState<string | null>(null);
   const [summary, setSummary] = useState({ enabled: false, send_time: '18:00', whatsapp: '' });
+
+  // Selfie/photo on clock-in — opt-in, per-company (anti-fraud)
+  const [requirePhoto, setRequirePhoto] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
+
+  const handleTogglePhoto = async (value: boolean) => {
+    if (!companyId) { toast.error('Empresa não encontrada'); return; }
+    setRequirePhoto(value);
+    setPhotoSaving(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ require_clock_photo: value })
+        .eq('id', companyId);
+      if (error) throw error;
+      toast.success(value ? 'Foto no ponto ativada' : 'Foto no ponto desativada');
+    } catch (e: any) {
+      setRequirePhoto(!value); // revert on failure
+      console.error('Erro ao salvar config de foto:', e);
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setPhotoSaving(false);
+    }
+  };
 
   const loadSummaryConfig = async (id: string) => {
     const { data } = await supabase
@@ -92,7 +116,7 @@ export default function CompanyProfile() {
         setCompanyId(id);
         const { data } = await supabase
           .from('companies')
-          .select('name, cnpj, email, phone, address, cep, city, state')
+          .select('name, cnpj, email, phone, address, cep, city, state, require_clock_photo')
           .eq('id', id)
           .maybeSingle();
         if (data) {
@@ -106,6 +130,7 @@ export default function CompanyProfile() {
             city: (data as any).city || '',
             state: (data as any).state || '',
           });
+          setRequirePhoto(!!(data as any).require_clock_photo);
         }
         await loadSummaryConfig(id);
       } catch (e) {
@@ -209,6 +234,30 @@ export default function CompanyProfile() {
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Salvar
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="card-modern">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-primary" />
+              Registro de Ponto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
+              <div className="pr-3">
+                <p className="font-medium text-sm">Exigir foto (selfie) ao bater ponto</p>
+                <p className="text-xs text-muted-foreground">
+                  Pede uma selfie de confirmação em toda batida (entrada, saída e almoço). Deixe desativado se não quiser usar câmera.
+                </p>
+              </div>
+              <Switch
+                checked={requirePhoto}
+                disabled={photoSaving}
+                onCheckedChange={handleTogglePhoto}
+              />
+            </div>
           </CardContent>
         </Card>
 
