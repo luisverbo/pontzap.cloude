@@ -722,7 +722,7 @@ export default function MasterPanel() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
               Painel Master
             </h1>
@@ -1020,7 +1020,7 @@ export default function MasterPanel() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Empresas</p>
-                      <p className="text-2xl font-bold">{companies.length}</p>
+                      <p className="text-2xl font-bold font-mono tabular-nums">{companies.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1033,7 +1033,7 @@ export default function MasterPanel() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Ativas</p>
-                      <p className="text-2xl font-bold">{companies.filter(c => c.status === 'active').length}</p>
+                      <p className="text-2xl font-bold font-mono tabular-nums">{companies.filter(c => c.status === 'active').length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1046,7 +1046,7 @@ export default function MasterPanel() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Pagamento Pendente</p>
-                      <p className="text-2xl font-bold">{companies.filter(c => c.payment_status === 'pending').length}</p>
+                      <p className="text-2xl font-bold font-mono tabular-nums">{companies.filter(c => c.payment_status === 'pending').length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1059,7 +1059,7 @@ export default function MasterPanel() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Usuários Master</p>
-                      <p className="text-2xl font-bold">{masterUsers.length}</p>
+                      <p className="text-2xl font-bold font-mono tabular-nums">{masterUsers.length}</p>
                     </div>
                   </div>
                 </CardContent>

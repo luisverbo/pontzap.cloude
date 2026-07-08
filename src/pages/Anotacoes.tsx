@@ -877,7 +877,7 @@ export default function Anotacoes() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Anotações de Folguistas</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Anotações de Folguistas</h1>
             <p className="text-muted-foreground">Organize dias trabalhados por período (mês/ano)</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1095,7 +1095,7 @@ export default function Anotacoes() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Acumulado</p>
-                  <p className="text-2xl font-bold">R$ {totalGeral.toFixed(2)}</p>
+                  <p className="text-2xl font-bold font-mono tabular-nums">R$ {totalGeral.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1109,7 +1109,7 @@ export default function Anotacoes() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">A Pagar</p>
-                  <p className="text-2xl font-bold text-warning">R$ {totalAPagarGeral.toFixed(2)}</p>
+                  <p className="text-2xl font-bold font-mono tabular-nums text-warning">R$ {totalAPagarGeral.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1123,7 +1123,7 @@ export default function Anotacoes() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Pago</p>
-                  <p className="text-2xl font-bold text-success">R$ {totalPagoGeral.toFixed(2)}</p>
+                  <p className="text-2xl font-bold font-mono tabular-nums text-success">R$ {totalPagoGeral.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>

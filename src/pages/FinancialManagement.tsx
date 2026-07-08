@@ -529,7 +529,7 @@ export default function FinancialManagement() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Gestão Financeira</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Gestão Financeira</h1>
             <p className="text-muted-foreground">
               Controle de entradas, despesas e hora extra
             </p>
@@ -828,7 +828,7 @@ export default function FinancialManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Recebido</p>
-                  <p className="text-2xl font-bold text-success">
+                  <p className="text-2xl font-bold font-mono tabular-nums text-success">
                     R$ {totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -844,7 +844,7 @@ export default function FinancialManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">A Receber</p>
-                  <p className="text-2xl font-bold text-warning">
+                  <p className="text-2xl font-bold font-mono tabular-nums text-warning">
                     R$ {pendingIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -860,7 +860,7 @@ export default function FinancialManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Despesas</p>
-                  <p className="text-2xl font-bold text-destructive">
+                  <p className="text-2xl font-bold font-mono tabular-nums text-destructive">
                     R$ {totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -876,7 +876,7 @@ export default function FinancialManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Saldo</p>
-                  <p className={`text-2xl font-bold ${balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  <p className={`text-2xl font-bold font-mono tabular-nums ${balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                     R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
