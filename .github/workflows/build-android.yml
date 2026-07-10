@@ -7,6 +7,15 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    # Também compila quando arquivos do app mudam nesta branch (gera APK sempre atual).
+    branches:
+      - 'claude/migrate-vercel-supabase-Mqic6'
+    paths:
+      - 'src/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'assets/**'
+      - '.github/workflows/build-android.yml'
 
 permissions:
   contents: write
