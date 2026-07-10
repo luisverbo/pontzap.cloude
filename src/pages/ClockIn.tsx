@@ -25,7 +25,9 @@ import {
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
 import { useSelfieCapture } from '@/hooks/useSelfieCapture';
-import { getCurrentPosition } from '@/lib/nativeGeo';
+import { getCurrentPosition, GeoError, openLocationSettings, type GeoErrorKind } from '@/lib/nativeGeo';
+import { ensureCameraPermission } from '@/lib/nativePermissions';
+import { isNative } from '@/lib/native';
 import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -89,6 +91,8 @@ export default function ClockIn() {
   const [loading, setLoading] = useState<ClockType | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [gpsErrorKind, setGpsErrorKind] = useState<GeoErrorKind | null>(null);
+  const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [employeeData, setEmployeeData] = useState<{ id: string; locationId: string | null; companyId: string | null; type: string; valorDiaria: number | null } | null>(null);
   const [requireClockPhoto, setRequireClockPhoto] = useState(false);
   const { capture: captureSelfie, overlay: selfieOverlay } = useSelfieCapture();
@@ -240,17 +244,35 @@ export default function ClockIn() {
     return () => clearInterval(timer);
   }, []);
 
+  // Get user's location — native GPS in the app (with permission dialog),
+  // browser geolocation on the web. Reusable so the user can retry after
+  // granting permission or turning the GPS on.
+  const refreshLocation = async () => {
+    setRefreshingLocation(true);
+    setLocationError(null);
+    setGpsErrorKind(null);
+    try {
+      const coords = await getCurrentPosition();
+      setLocation(coords);
+      setGpsErrorKind(null);
+    } catch (e) {
+      const kind = e instanceof GeoError ? e.kind : 'unavailable';
+      setGpsErrorKind(kind);
+      setLocationError(
+        kind === 'disabled'
+          ? 'O GPS do celular está desligado. Ative a localização e toque em Tentar novamente.'
+          : kind === 'permission'
+          ? 'Permissão de localização negada. Permita o acesso e toque em Tentar novamente.'
+          : 'Não foi possível obter sua localização.'
+      );
+    } finally {
+      setRefreshingLocation(false);
+    }
+  };
+
   useEffect(() => {
-    // Get user's location — native GPS in the app, browser geolocation on the web
-    let active = true;
-    getCurrentPosition()
-      .then((coords) => {
-        if (active) setLocation(coords);
-      })
-      .catch(() => {
-        if (active) setLocationError('Não foi possível obter sua localização. Verifique as permissões.');
-      });
-    return () => { active = false; };
+    refreshLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch employee data
@@ -318,10 +340,14 @@ export default function ClockIn() {
     }
   };
 
-  // For entry and exit: open QR scanner first
+  // For entry and exit: open QR scanner first. Request camera permission up front
+  // (native) so the scanner's camera can actually open on Android.
   const handleEntryExitClick = (type: ClockType) => {
     setPendingClockType(type);
     setShowQRScanner(true);
+    if (isNative) {
+      ensureCameraPermission();
+    }
   };
 
   // For lunch: clock in directly without QR (GPS based)
@@ -337,9 +363,15 @@ export default function ClockIn() {
       return;
     }
 
-    // Capture the selfie INSIDE the tap gesture (iOS requirement) when the company
-    // requires it. captureSelfie() fires getUserMedia synchronously, then awaits.
-    const photo = requireClockPhoto ? await captureSelfie() : undefined;
+    // Capture the selfie when the company requires it. On native, ensure the
+    // camera permission first (Android WebView getUserMedia needs it; unlike iOS
+    // web it isn't tap-gesture-locked). On web, keep captureSelfie() in the tap
+    // gesture (iOS requirement) with no await before it.
+    let photo: string | undefined;
+    if (requireClockPhoto) {
+      if (isNative) await ensureCameraPermission();
+      photo = (await captureSelfie()) || undefined;
+    }
 
     setLoading(type);
 
@@ -560,6 +592,11 @@ export default function ClockIn() {
                   <MapPin className="h-3.5 w-3.5 text-success" />
                   <span className="text-success font-medium">Localização ativa</span>
                 </>
+              ) : refreshingLocation ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Localizando...</span>
+                </>
               ) : locationError ? (
                 <>
                   <MapPin className="h-3.5 w-3.5 text-destructive" />
@@ -572,6 +609,25 @@ export default function ClockIn() {
                 </>
               )}
             </div>
+
+            {/* Helpful recovery actions when there's no GPS fix */}
+            {!location && !refreshingLocation && locationError && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto">{locationError}</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Button size="sm" variant="outline" onClick={refreshLocation} className="h-9">
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Tentar novamente
+                  </Button>
+                  {isNative && (gpsErrorKind === 'disabled' || gpsErrorKind === 'unavailable') && (
+                    <Button size="sm" onClick={() => openLocationSettings()} className="h-9">
+                      <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                      Ativar GPS
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 

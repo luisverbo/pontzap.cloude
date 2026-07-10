@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useSelfieCapture } from '@/hooks/useSelfieCapture';
+import { ensureCameraPermission } from '@/lib/nativePermissions';
 
 interface QRCodeScannerProps {
   onScan: (locationId: string, locationName: string) => void;
@@ -69,6 +70,15 @@ export function QRCodeScanner({
 
   const startScanner = async () => {
     setCameraError(null);
+
+    // Native: make sure the Android camera permission is granted BEFORE html5-qrcode
+    // calls getUserMedia — otherwise the WebView silently denies it.
+    const camOk = await ensureCameraPermission();
+    if (!camOk) {
+      setHasPermission(false);
+      setCameraError('Permissão de câmera negada. Permita o acesso à câmera para ler o QR Code, ou use a opção sem QR Code.');
+      return;
+    }
 
     // Wait for container to be ready
     await new Promise(resolve => setTimeout(resolve, 100));
