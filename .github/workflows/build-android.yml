@@ -47,12 +47,14 @@ jobs:
         run: npx cap add android
 
       - name: Prepare splash source (2732x2732, logo centered on brand green)
+        continue-on-error: true
         run: |
           sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
           convert assets/icon.png -resize 900x900 -background '#2f5d47' -gravity center -extent 2732x2732 assets/splash.png
           cp assets/splash.png assets/splash-dark.png
 
       - name: Generate app icons & splash
+        continue-on-error: true
         run: npx @capacitor/assets generate --android --iconBackgroundColor '#2f5d47' --iconBackgroundColorDark '#2f5d47' --splashBackgroundColor '#2f5d47' --splashBackgroundColorDark '#1e3d2f'
 
       - name: Sync Capacitor
