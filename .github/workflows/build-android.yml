@@ -55,6 +55,16 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Declare camera & location permissions in AndroidManifest
+        # Sem estas declarações o Android NEGA as permissões na hora, sem nem
+        # mostrar o diálogo — GPS e câmera ficam mortos no app.
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          perl -0pi -e 's|(<uses-permission android:name="android.permission.INTERNET" ?/>)|$1\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.front" android:required="false" />|' "$MANIFEST"
+          echo "--- AndroidManifest.xml após patch ---"
+          cat "$MANIFEST"
+          grep -q 'android.permission.CAMERA' "$MANIFEST" || { echo "ERRO: patch de permissões não aplicado"; exit 1; }
+
       - name: Prepare splash source (2732x2732, logo centered on brand green)
         continue-on-error: true
         run: |
