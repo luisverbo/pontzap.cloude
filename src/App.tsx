@@ -30,6 +30,7 @@ import MyShiftSwaps from "./pages/MyShiftSwaps";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
+import { isNative } from "@/lib/native";
 
 const queryClient = new QueryClient();
 
@@ -82,7 +83,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to={getDefaultRoute()} replace /> : <LandingPage />} />
+      {/* In the native app there is no marketing landing page — go straight to
+          the employee flow (login, or the clock screen once authenticated). */}
+      <Route path="/" element={user ? <Navigate to={getDefaultRoute()} replace /> : (isNative ? <Navigate to="/auth" replace /> : <LandingPage />)} />
       <Route path="/auth" element={user ? <Navigate to={getDefaultRoute()} replace /> : <Auth />} />
       
       <Route

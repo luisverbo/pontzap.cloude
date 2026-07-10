@@ -25,6 +25,7 @@ import {
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
 import { useSelfieCapture } from '@/hooks/useSelfieCapture';
+import { getCurrentPosition } from '@/lib/nativeGeo';
 import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -240,23 +241,16 @@ export default function ClockIn() {
   }, []);
 
   useEffect(() => {
-    // Get user's location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          setLocationError('Não foi possível obter sua localização. Verifique as permissões.');
-        },
-        { enableHighAccuracy: true }
-      );
-    } else {
-      setLocationError('Geolocalização não suportada pelo navegador.');
-    }
+    // Get user's location — native GPS in the app, browser geolocation on the web
+    let active = true;
+    getCurrentPosition()
+      .then((coords) => {
+        if (active) setLocation(coords);
+      })
+      .catch(() => {
+        if (active) setLocationError('Não foi possível obter sua localização. Verifique as permissões.');
+      });
+    return () => { active = false; };
   }, []);
 
   // Fetch employee data
