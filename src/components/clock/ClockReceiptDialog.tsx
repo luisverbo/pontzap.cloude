@@ -1,8 +1,13 @@
+import { useState } from 'react';
+import jsPDF from 'jspdf';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Download } from 'lucide-react';
+import { CheckCircle2, Download, Loader2 } from 'lucide-react';
 import { CLOCK_TYPE_LABELS, type ClockType } from '@/types';
 import type { ClockReceipt } from '@/hooks/useClockRecords';
+import { saveOrShareBase64 } from '@/lib/nativeShare';
+import { isNative } from '@/lib/native';
 
 interface Props {
   receipt: ClockReceipt | null;
@@ -18,6 +23,7 @@ const spDateTime = (iso: string): string =>
   }).format(new Date(iso));
 
 export function ClockReceiptDialog({ receipt, employeeName, onClose }: Props) {
+  const [downloading, setDownloading] = useState(false);
   if (!receipt) return null;
 
   const dateTime = spDateTime(receipt.timestamp);
@@ -25,26 +31,88 @@ export function ClockReceiptDialog({ receipt, employeeName, onClose }: Props) {
   const nsr = receipt.nsr != null ? String(receipt.nsr).padStart(9, '0') : '—';
   const hashShort = receipt.hash ? receipt.hash.slice(0, 32).toUpperCase() : '—';
 
-  const handleDownload = () => {
-    const text =
-      `COMPROVANTE DE REGISTRO DE PONTO\n` +
-      `(Portaria MTP 671/2021)\n` +
-      `--------------------------------\n` +
-      `Funcionário: ${employeeName}\n` +
-      `Tipo: ${tipo}\n` +
-      `Local: ${receipt.locationName}\n` +
-      `Data/Hora: ${dateTime}\n` +
-      `NSR: ${nsr}\n` +
-      `Código de verificação (SHA-256):\n${receipt.hash || '—'}\n` +
-      `--------------------------------\n` +
-      `PONTZAP\n`;
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `comprovante-ponto-NSR-${nsr}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const buildPdfBase64 = (): string => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a5' });
+    const left = 14;
+    let y = 20;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text('Comprovante de Registro de Ponto', left, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text('Portaria MTP 671/2021', left, y);
+    doc.setTextColor(30);
+    y += 4;
+    doc.setDrawColor(200);
+    doc.line(left, y, 134, y);
+    y += 8;
+
+    const row = (k: string, v: string) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(k, left, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(v, left + 32, y);
+      y += 7;
+    };
+    row('Funcionário', employeeName);
+    row('Tipo', tipo);
+    row('Local', receipt.locationName || '—');
+    row('Data/Hora', dateTime);
+    row('NSR', nsr);
+
+    y += 2;
+    doc.setDrawColor(200);
+    doc.line(left, y, 134, y);
+    y += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Código de verificação (SHA-256)', left, y);
+    y += 6;
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(60);
+    doc.text(doc.splitTextToSize(receipt.hash || '—', 120), left, y);
+    doc.setTextColor(30);
+
+    y += 16;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(110);
+    doc.text(
+      doc.splitTextToSize(
+        'Guarde este comprovante. O NSR e o código de verificação garantem a autenticidade do registro.',
+        120
+      ),
+      left,
+      y
+    );
+
+    // Base64 without the "data:application/pdf;..." prefix
+    return doc.output('datauristring').split(',')[1];
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const base64 = buildPdfBase64();
+      const filename = `comprovante-ponto-NSR-${nsr}.pdf`;
+      const result = await saveOrShareBase64(filename, base64, 'application/pdf', 'Comprovante de Ponto');
+      if (result === 'error') {
+        toast.error('Não foi possível gerar o comprovante.');
+      } else if (result === 'downloaded') {
+        toast.success('Comprovante baixado.');
+      }
+      // 'shared' → the native share sheet handles feedback
+    } catch (e) {
+      console.error('Erro ao gerar comprovante:', e);
+      toast.error('Não foi possível gerar o comprovante.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -83,9 +151,9 @@ export function ClockReceiptDialog({ receipt, employeeName, onClose }: Props) {
         </p>
 
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Baixar
+          <Button variant="outline" className="flex-1" onClick={handleDownload} disabled={downloading}>
+            {downloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {isNative ? 'Compartilhar' : 'Baixar'}
           </Button>
           <Button className="flex-1" onClick={onClose}>
             Fechar
