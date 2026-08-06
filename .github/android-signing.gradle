@@ -1,0 +1,19 @@
+// Appended to android/app/build.gradle by the Build Android APK workflow when
+// the signing secrets are present. Keeps the APK signature stable across
+// builds so users can install updates in place instead of uninstalling first.
+android {
+    signingConfigs {
+        release {
+            storeFile file("pontzap-release.keystore")
+            storePassword System.getenv("KEYSTORE_PASSWORD")
+            keyAlias "pontzap"
+            keyPassword System.getenv("KEYSTORE_PASSWORD")
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+}

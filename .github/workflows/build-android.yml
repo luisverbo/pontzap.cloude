@@ -90,29 +90,12 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
             echo "$KEYSTORE_B64" | base64 -d > android/app/pontzap-release.keystore
-            cat >> android/app/build.gradle <<'GRADLE'
-
-android {
-    signingConfigs {
-        release {
-            storeFile file("pontzap-release.keystore")
-            storePassword System.getenv("KEYSTORE_PASSWORD")
-            keyAlias "pontzap"
-            keyPassword System.getenv("KEYSTORE_PASSWORD")
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
-    }
-}
-GRADLE
+            cat .github/android-signing.gradle >> android/app/build.gradle
             echo "mode=release" >> $GITHUB_OUTPUT
-            echo "APK será assinado com a chave permanente (atualização in-place OK)."
+            echo "APK sera assinado com a chave permanente (atualizacao in-place OK)."
           else
             echo "mode=debug" >> $GITHUB_OUTPUT
-            echo "AVISO: secrets de assinatura ausentes — gerando APK debug."
+            echo "AVISO: secrets de assinatura ausentes - gerando APK debug."
           fi
 
       - name: Build APK
