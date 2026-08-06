@@ -26,6 +26,9 @@ import FinancialManagement from "./pages/FinancialManagement";
 import MasterPanel from "./pages/MasterPanel";
 import Anotacoes from "./pages/Anotacoes";
 import ShiftSwaps from "./pages/ShiftSwaps";
+import Occurrences from "./pages/Occurrences";
+import MyOccurrences from "./pages/MyOccurrences";
+import PublicOccurrence from "./pages/PublicOccurrence";
 import MyShiftSwaps from "./pages/MyShiftSwaps";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
@@ -87,6 +90,9 @@ function AppRoutes() {
           the employee flow (login, or the clock screen once authenticated). */}
       <Route path="/" element={user ? <Navigate to={getDefaultRoute()} replace /> : (isNative ? <Navigate to="/auth" replace /> : <LandingPage />)} />
       <Route path="/auth" element={user ? <Navigate to={getDefaultRoute()} replace /> : <Auth />} />
+
+      {/* Link público da ocorrência — o condomínio abre sem login */}
+      <Route path="/ocorrencia/:token" element={<PublicOccurrence />} />
       
       <Route
         path="/dashboard"
@@ -187,6 +193,24 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/ocorrencias"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Occurrences />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/minhas-ocorrencias"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <MyOccurrences />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/reports"
         element={

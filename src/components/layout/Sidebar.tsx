@@ -28,6 +28,7 @@ import {
   Shield,
   UserCheck,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react';
 
 interface NavItem {
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Bater Ponto', href: '/clock', icon: <Clock className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Meu Histórico', href: '/history', icon: <History className="h-4 w-4" />, roles: ['employee'] },
+      { label: 'Ocorrências', href: '/minhas-ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['employee'] },
     ],
   },
   {
@@ -83,6 +85,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Folguistas', href: '/anotacoes', icon: <UserCheck className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Banco de Horas', href: '/banco-horas', icon: <Clock className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Ocorrências', href: '/ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Notificações', href: '/notifications', icon: <Bell className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Financeiro', href: '/financeiro', icon: <DollarSign className="h-4 w-4" />, roles: ['admin'] },
     ],

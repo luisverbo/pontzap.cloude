@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.daily-summary]
 verify_jwt = false
+
+[functions.occurrence-public]
+verify_jwt = false

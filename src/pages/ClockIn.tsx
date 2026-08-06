@@ -20,7 +20,8 @@ import {
   Calendar,
   DollarSign,
   ChevronDown,
-  FileText
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
@@ -87,6 +88,7 @@ const clockButtons: ClockButton[] = [
 
 export default function ClockIn() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState<ClockType | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -735,6 +737,23 @@ export default function ClockIn() {
               <div className="text-left">
                 <p className="font-medium">Troca de Escalas</p>
                 <p className="text-xs text-muted-foreground">Solicitar ou aceitar trocas</p>
+              </div>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Livro de Ocorrências */}
+        <Card variant="default">
+          <CardContent className="p-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => navigate('/minhas-ocorrencias')}
+            >
+              <ClipboardList className="h-5 w-5 text-primary" />
+              <div className="text-left">
+                <p className="font-medium">Livro de Ocorrências</p>
+                <p className="text-xs text-muted-foreground">Registrar ocorrência no local</p>
               </div>
             </Button>
           </CardContent>
