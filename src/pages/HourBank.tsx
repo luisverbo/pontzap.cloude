@@ -10,12 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { format } from 'date-fns';
-import { Clock, Plus, ChevronDown, Loader2, Scale, Trash2 } from 'lucide-react';
+import { Clock, Plus, ChevronDown, Loader2, Scale, Trash2, Calculator } from 'lucide-react';
 
 interface Entry {
   id: string;
@@ -50,6 +51,82 @@ export default function HourBank() {
   const [addFor, setAddFor] = useState<Emp | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ direction: 'credit', hours: '', minutes: '', description: '', date: format(new Date(), 'yyyy-MM-dd') });
+
+  // Cálculo automático
+  const [cfg, setCfg] = useState<{ enabled: boolean; tolerance_minutes: number; credit_holidays: boolean; last_calculated_at: string | null }>({
+    enabled: false, tolerance_minutes: 10, credit_holidays: true, last_calculated_at: null,
+  });
+  const [savingCfg, setSavingCfg] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [range, setRange] = useState(() => {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: format(first, 'yyyy-MM-dd'), end: format(now, 'yyyy-MM-dd') };
+  });
+
+  const loadConfig = async () => {
+    const companyId = await resolveCompanyId();
+    if (!companyId) return;
+    const { data } = await supabase
+      .from('hour_bank_config')
+      .select('enabled, tolerance_minutes, credit_holidays, last_calculated_at')
+      .eq('company_id', companyId)
+      .maybeSingle();
+    if (data) setCfg(data as any);
+  };
+
+  const saveConfig = async (patch: Partial<typeof cfg>) => {
+    const companyId = await resolveCompanyId();
+    if (!companyId) { toast.error('Empresa não encontrada'); return; }
+    const next = { ...cfg, ...patch };
+    setCfg(next);
+    setSavingCfg(true);
+    try {
+      const { error } = await supabase.from('hour_bank_config').upsert({
+        company_id: companyId,
+        enabled: next.enabled,
+        tolerance_minutes: next.tolerance_minutes,
+        credit_holidays: next.credit_holidays,
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: 'company_id' });
+      if (error) throw error;
+    } catch (e: any) {
+      setCfg(cfg); // revert
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setSavingCfg(false);
+    }
+  };
+
+  const runCalculation = async () => {
+    const companyId = await resolveCompanyId();
+    if (!companyId) { toast.error('Empresa não encontrada'); return; }
+    setCalculating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('hour-bank-calc', {
+        body: { companyId, startDate: range.start, endDate: range.end },
+      });
+      if (error) {
+        let info: any = {};
+        try { info = await (error as any).context?.json?.(); } catch { /* ignore */ }
+        throw new Error(info?.error || error.message);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const count = (data as any)?.results?.[0]?.entries ?? 0;
+      toast.success(count > 0
+        ? `${count} lançamento${count !== 1 ? 's' : ''} automático${count !== 1 ? 's' : ''} gerado${count !== 1 ? 's' : ''}.`
+        : 'Nenhuma diferença encontrada no período.');
+      setAutoOpen(false);
+      loadConfig();
+      load();
+    } catch (e: any) {
+      console.error('Erro no cálculo:', e);
+      toast.error(`Erro ao calcular: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   const resolveCompanyId = async (): Promise<string | null> => {
     const imp = getImpersonatedCompanyId();
@@ -106,7 +183,7 @@ export default function HourBank() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(); loadConfig(); /* eslint-disable-next-line */ }, []);
 
   const openAdd = (emp: Emp) => {
     setAddFor(emp);
@@ -179,7 +256,36 @@ export default function HourBank() {
           icon={<Clock className="h-6 w-6" />}
           title="Banco de Horas"
           description="Saldo de horas extras e débitos por funcionário"
+          actions={
+            <Button variant="outline" onClick={() => setAutoOpen(true)}>
+              <Calculator className="h-4 w-4 mr-2" />
+              Cálculo automático
+            </Button>
+          }
         />
+
+        <Card className="card-modern">
+          <CardContent className="p-4 flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <p className="font-medium text-sm flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-primary" />
+                Cálculo automático diário
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-lg">
+                Compara os pontos batidos com a jornada prevista e lança a diferença sozinho,
+                todo dia de madrugada. Só conta dias com entrada e saída registradas.
+                {cfg.last_calculated_at && (
+                  <> Último cálculo: {format(new Date(cfg.last_calculated_at), 'dd/MM/yyyy HH:mm')}.</>
+                )}
+              </p>
+            </div>
+            <Switch
+              checked={cfg.enabled}
+              disabled={savingCfg}
+              onCheckedChange={(v) => saveConfig({ enabled: v })}
+            />
+          </CardContent>
+        </Card>
 
         {loading ? (
           <div className="space-y-2">
@@ -228,6 +334,7 @@ export default function HourBank() {
                                 <span className="text-muted-foreground">{format(new Date(e.entry_date + 'T12:00:00'), 'dd/MM/yyyy')}</span>
                                 {e.description && <span className="text-foreground/80"> — {e.description}</span>}
                                 {e.kind === 'settlement' && <span className="text-[10px] uppercase ml-2 text-muted-foreground">acerto</span>}
+                                {e.kind === 'auto' && <span className="text-[10px] uppercase ml-2 text-primary">auto</span>}
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className={`font-medium tabular-nums ${e.minutes >= 0 ? 'text-success' : 'text-destructive'}`}>{fmt(e.minutes)}</span>
@@ -293,6 +400,69 @@ export default function HourBank() {
               <Button className="w-full" onClick={handleAdd} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Lançar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cálculo automático */}
+        <Dialog open={autoOpen} onOpenChange={setAutoOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-primary" />
+                Calcular banco de horas
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Compara os pontos batidos com a jornada prevista e lança a diferença.
+                Pode rodar quantas vezes quiser: os lançamentos automáticos do período
+                são refeitos, e os manuais nunca são alterados.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>De</Label>
+                  <Input type="date" value={range.start} onChange={(e) => setRange({ ...range, start: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Até</Label>
+                  <Input type="date" value={range.end} onChange={(e) => setRange({ ...range, end: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tolerância diária (minutos)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={cfg.tolerance_minutes}
+                  onChange={(e) => setCfg({ ...cfg, tolerance_minutes: parseInt(e.target.value || '0', 10) })}
+                  onBlur={() => saveConfig({ tolerance_minutes: cfg.tolerance_minutes })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Diferenças menores que isso no dia são ignoradas.
+                </p>
+              </div>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-border/60 p-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">Feriado trabalhado vira crédito</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Todo o tempo trabalhado em feriado entra como hora extra.
+                  </p>
+                </div>
+                <Switch
+                  checked={cfg.credit_holidays}
+                  onCheckedChange={(v) => saveConfig({ credit_holidays: v })}
+                />
+              </div>
+
+              <Button className="w-full" onClick={runCalculation} disabled={calculating}>
+                {calculating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Calculator className="h-4 w-4 mr-2" />}
+                Calcular período
               </Button>
             </div>
           </DialogContent>
