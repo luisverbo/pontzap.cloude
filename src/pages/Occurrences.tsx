@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   ClipboardList, Check, X, Loader2, MapPin, Link2, MessageCircle,
-  Trash2, Plus, Settings2, ExternalLink,
+  Trash2, Plus, Settings2, ExternalLink, User,
 } from 'lucide-react';
 import {
   useOccurrences, useOccurrenceTypes, photoUrl, generatePublicToken, publicOccurrenceUrl,
@@ -236,12 +236,18 @@ export default function Occurrences() {
                           <Badge variant={st.variant}>{st.label}</Badge>
                         </div>
 
-                        {occ.locations?.name && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {occ.locations.name}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5" />
+                            {occ.employee_name || 'Funcionário não identificado'}
+                          </span>
+                          {occ.locations?.name && (
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {occ.locations.name}
+                            </span>
+                          )}
+                        </div>
 
                         <p className="text-sm text-foreground/90 whitespace-pre-wrap">{occ.description}</p>
 

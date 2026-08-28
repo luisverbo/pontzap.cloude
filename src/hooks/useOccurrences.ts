@@ -31,7 +31,8 @@ export interface Occurrence {
   review_note: string | null;
   created_at: string;
   locations?: { name: string } | null;
-  employees?: { id: string; profiles?: { name: string } | null } | null;
+  /** Resolved separately (see useOccurrences) — employees has no FK to profiles. */
+  employee_name?: string | null;
 }
 
 export const SEVERITY_LABELS: Record<OccurrenceSeverity, string> = {
@@ -122,7 +123,34 @@ export function useOccurrences() {
         .select('*, locations(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setOccurrences((data || []) as unknown as Occurrence[]);
+
+      const rows = (data || []) as unknown as Occurrence[];
+
+      // employees has no PostgREST relationship to profiles (both point at
+      // auth.users), so resolve the reporter names in a second pass — same
+      // approach used by useEmployees.
+      const employeeIds = [...new Set(rows.map((r) => r.employee_id).filter(Boolean))] as string[];
+      if (employeeIds.length > 0) {
+        const { data: emps } = await supabase
+          .from('employees')
+          .select('id, user_id')
+          .in('id', employeeIds);
+        const userIds = [...new Set((emps || []).map((e: any) => e.user_id).filter(Boolean))];
+        const { data: profs } = userIds.length
+          ? await supabase.from('profiles').select('id, name').in('id', userIds)
+          : { data: [] as any[] };
+
+        const nameByEmployeeId = new Map<string, string>();
+        (emps || []).forEach((e: any) => {
+          const name = (profs || []).find((p: any) => p.id === e.user_id)?.name;
+          if (name) nameByEmployeeId.set(e.id, name);
+        });
+        rows.forEach((r) => {
+          r.employee_name = r.employee_id ? nameByEmployeeId.get(r.employee_id) ?? null : null;
+        });
+      }
+
+      setOccurrences(rows);
     } catch (e) {
       console.error('Erro ao carregar ocorrências:', e);
     } finally {
