@@ -16,7 +16,7 @@ import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { toast } from 'sonner';
 import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarOff, Plus, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarOff, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { DAY_OFF_KINDS, type DayOff, type DayOffKind } from '@/hooks/useDayOffs';
 import { DAYS_OF_WEEK } from '@/types';
 
@@ -33,6 +33,8 @@ export default function DayOffs() {
   const [dayOffs, setDayOffs] = useState<DayOff[]>([]);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
+  const [subs, setSubs] = useState<{ id: string; name: string }[]>([]);
+  const [nameByEmployeeId, setNameByEmployeeId] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -41,7 +43,34 @@ export default function DayOffs() {
     kind: 'sunday' as DayOffKind,
     notes: '',
     discountHours: '',
+    substitute_id: '',
   });
+
+  // Vincular/alterar o folguista de uma folga já escalada
+  const [linkingOff, setLinkingOff] = useState<DayOff | null>(null);
+  const [linkSubId, setLinkSubId] = useState('');
+  const [linking, setLinking] = useState(false);
+
+  const NONE = '__none__'; // Select do Radix não aceita value=""
+
+  const saveSubstitute = async () => {
+    if (!linkingOff) return;
+    setLinking(true);
+    try {
+      const { error } = await supabase
+        .from('day_offs')
+        .update({ substitute_id: linkSubId && linkSubId !== NONE ? linkSubId : null } as any)
+        .eq('id', linkingOff.id);
+      if (error) throw error;
+      toast.success(linkSubId && linkSubId !== NONE ? 'Folguista vinculado!' : 'Folguista removido.');
+      setLinkingOff(null);
+      load();
+    } catch (e: any) {
+      toast.error(`Erro ao vincular: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setLinking(false);
+    }
+  };
 
   const resolveCompanyId = async (): Promise<string | null> => {
     const imp = getImpersonatedCompanyId();
@@ -65,13 +94,21 @@ export default function DayOffs() {
       const { data: employees } = await empQuery;
 
       const staff = (employees || []).filter((e: any) => e.type !== 'substitute');
-      const userIds = staff.map((e: any) => e.user_id);
+      const substitutes = (employees || []).filter((e: any) => e.type === 'substitute');
+      const userIds = (employees || []).map((e: any) => e.user_id);
       const ids = staff.map((e: any) => e.id);
 
       const { data: profs } = await supabase
         .from('profiles').select('id, name').in('id', userIds.length ? userIds : ['']);
       const nameByUser: Record<string, string> = {};
       (profs || []).forEach((p: any) => { nameByUser[p.id] = p.name; });
+
+      setSubs(substitutes
+        .map((e: any) => ({ id: e.id, name: nameByUser[e.user_id] || 'Folguista' }))
+        .sort((a, b) => a.name.localeCompare(b.name)));
+      setNameByEmployeeId(Object.fromEntries(
+        (employees || []).map((e: any) => [e.id, nameByUser[e.user_id] || 'Funcionário'])
+      ));
 
       // Folga semanal fixa de cada um (works = false na escala fixa)
       const { data: schedules } = await supabase
@@ -118,6 +155,7 @@ export default function DayOffs() {
       kind: 'sunday',
       notes: '',
       discountHours: '',
+      substitute_id: '',
     });
     setDialogOpen(true);
   };
@@ -159,6 +197,7 @@ export default function DayOffs() {
         kind: form.kind,
         notes: form.notes.trim() || null,
         hour_bank_entry_id: hourBankEntryId,
+        substitute_id: form.substitute_id && form.substitute_id !== NONE ? form.substitute_id : null,
       } as any);
       if (error) throw error;
 
@@ -262,18 +301,31 @@ export default function DayOffs() {
                         {offs.map((off) => {
                           const k = DAY_OFF_KINDS[off.kind];
                           return (
-                            <div key={off.id} className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="font-mono tabular-nums text-sm">
-                                  {format(new Date(`${off.date}T12:00:00`), 'dd/MM')}
-                                </span>
-                                <span className="text-xs text-muted-foreground capitalize">
-                                  {format(new Date(`${off.date}T12:00:00`), 'EEEE', { locale: ptBR })}
-                                </span>
-                                <Badge variant={k.variant}>{k.short}</Badge>
-                                {off.notes && (
-                                  <span className="text-xs text-muted-foreground truncate">{off.notes}</span>
-                                )}
+                            <div key={off.id} className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="font-mono tabular-nums text-sm">
+                                    {format(new Date(`${off.date}T12:00:00`), 'dd/MM')}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    {format(new Date(`${off.date}T12:00:00`), 'EEEE', { locale: ptBR })}
+                                  </span>
+                                  <Badge variant={k.variant}>{k.short}</Badge>
+                                  {off.notes && (
+                                    <span className="text-xs text-muted-foreground truncate">{off.notes}</span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => { setLinkingOff(off); setLinkSubId(off.substitute_id || NONE); }}
+                                  className="mt-1 text-xs flex items-center gap-1.5 hover:underline focus-visible:underline"
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  {off.substitute_id
+                                    ? <span className="text-muted-foreground">
+                                        Cobertura: <span className="text-foreground">{nameByEmployeeId[off.substitute_id] || 'Folguista'}</span>
+                                      </span>
+                                    : <span className="text-warning">Sem folguista — definir</span>}
+                                </button>
                               </div>
                               <Button
                                 variant="ghost"
@@ -304,7 +356,7 @@ export default function DayOffs() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Funcionário *</Label>
+              <Label>Quem vai folgar *</Label>
               <Select value={form.employee_id} onValueChange={(v) => setForm({ ...form, employee_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
@@ -353,6 +405,23 @@ export default function DayOffs() {
             )}
 
             <div className="space-y-2">
+              <Label>Folguista que vai cobrir (opcional)</Label>
+              <Select
+                value={form.substitute_id || NONE}
+                onValueChange={(v) => setForm({ ...form, substitute_id: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Definir depois" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Definir depois</SelectItem>
+                  {subs.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Pode deixar em branco e vincular o folguista quando arrumar.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label>Observação (opcional)</Label>
               <Input
                 value={form.notes}
@@ -365,6 +434,53 @@ export default function DayOffs() {
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarOff className="h-4 w-4 mr-2" />}
               Escalar folga
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vincular folguista depois */}
+      <Dialog open={!!linkingOff} onOpenChange={(o) => { if (!o) setLinkingOff(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Folguista que vai cobrir</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {linkingOff && (
+              <p className="text-sm text-muted-foreground">
+                Folga de{' '}
+                <strong className="text-foreground">{nameByEmployeeId[linkingOff.employee_id] || 'funcionário'}</strong>
+                {' '}em{' '}
+                <strong className="text-foreground">
+                  {format(new Date(`${linkingOff.date}T12:00:00`), 'dd/MM/yyyy')}
+                </strong>.
+              </p>
+            )}
+
+            <div className="space-y-2">
+              <Label>Folguista</Label>
+              <Select value={linkSubId || NONE} onValueChange={setLinkSubId}>
+                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Nenhum (definir depois)</SelectItem>
+                  {subs.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {subs.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum folguista cadastrado. Cadastre em Funcionários, com o tipo "folguista".
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setLinkingOff(null)}>
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={saveSubstitute} disabled={linking}>
+                {linking && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

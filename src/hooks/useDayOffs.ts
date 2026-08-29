@@ -11,6 +11,8 @@ export interface DayOff {
   kind: DayOffKind;
   notes: string | null;
   hour_bank_entry_id: string | null;
+  /** Folguista que cobre a folga — opcional, costuma ser definido depois. */
+  substitute_id: string | null;
   created_at: string;
 }
 
