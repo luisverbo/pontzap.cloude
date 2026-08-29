@@ -29,6 +29,8 @@ import ShiftSwaps from "./pages/ShiftSwaps";
 import Occurrences from "./pages/Occurrences";
 import MyOccurrences from "./pages/MyOccurrences";
 import PublicOccurrence from "./pages/PublicOccurrence";
+import DayOffs from "./pages/DayOffs";
+import MyDayOffs from "./pages/MyDayOffs";
 import MyShiftSwaps from "./pages/MyShiftSwaps";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
@@ -193,6 +195,24 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/folgas"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <DayOffs />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/minhas-folgas"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <MyDayOffs />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/ocorrencias"
         element={

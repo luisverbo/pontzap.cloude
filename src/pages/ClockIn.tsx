@@ -21,7 +21,8 @@ import {
   DollarSign,
   ChevronDown,
   FileText,
-  ClipboardList
+  ClipboardList,
+  CalendarOff
 } from 'lucide-react';
 import { ClockType, CLOCK_TYPE_LABELS } from '@/types';
 import { useClockRecords, type ClockReceipt } from '@/hooks/useClockRecords';
@@ -737,6 +738,23 @@ export default function ClockIn() {
               <div className="text-left">
                 <p className="font-medium">Troca de Escalas</p>
                 <p className="text-xs text-muted-foreground">Solicitar ou aceitar trocas</p>
+              </div>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Minhas Folgas */}
+        <Card variant="default">
+          <CardContent className="p-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => navigate('/minhas-folgas')}
+            >
+              <CalendarOff className="h-5 w-5 text-primary" />
+              <div className="text-left">
+                <p className="font-medium">Minhas Folgas</p>
+                <p className="text-xs text-muted-foreground">Ver os seus dias de folga</p>
               </div>
             </Button>
           </CardContent>

@@ -29,6 +29,7 @@ import {
   UserCheck,
   ChevronRight,
   ClipboardList,
+  CalendarOff,
 } from 'lucide-react';
 
 interface NavItem {
@@ -51,6 +52,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Bater Ponto', href: '/clock', icon: <Clock className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Meu Histórico', href: '/history', icon: <History className="h-4 w-4" />, roles: ['employee'] },
+      { label: 'Minhas Folgas', href: '/minhas-folgas', icon: <CalendarOff className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Ocorrências', href: '/minhas-ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['employee'] },
     ],
   },
@@ -77,6 +79,7 @@ const navGroups: NavGroup[] = [
       { label: 'Escala Fixa', href: '/fixed-schedules', icon: <Calendar className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Escalas Pontuais', href: '/punctual-schedules', icon: <CalendarCheck className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Feriados', href: '/feriados', icon: <CalendarDays className="h-4 w-4" />, roles: ['admin'] },
+      { label: 'Escala de Folgas', href: '/folgas', icon: <CalendarOff className="h-4 w-4" />, roles: ['admin'] },
     ],
   },
   {
