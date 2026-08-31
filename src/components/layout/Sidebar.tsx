@@ -30,6 +30,8 @@ import {
   ChevronRight,
   ClipboardList,
   CalendarOff,
+  FileHeart,
+  ScrollText,
 } from 'lucide-react';
 
 interface NavItem {
@@ -53,6 +55,7 @@ const navGroups: NavGroup[] = [
       { label: 'Bater Ponto', href: '/clock', icon: <Clock className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Meu Histórico', href: '/history', icon: <History className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Minhas Folgas', href: '/minhas-folgas', icon: <CalendarOff className="h-4 w-4" />, roles: ['employee'] },
+      { label: 'Justificar Falta', href: '/minhas-justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Ocorrências', href: '/minhas-ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['employee'] },
     ],
   },
@@ -89,6 +92,7 @@ const navGroups: NavGroup[] = [
       { label: 'Folguistas', href: '/anotacoes', icon: <UserCheck className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Banco de Horas', href: '/banco-horas', icon: <Clock className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Ocorrências', href: '/ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Justificativas', href: '/justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Notificações', href: '/notifications', icon: <Bell className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Financeiro', href: '/financeiro', icon: <DollarSign className="h-4 w-4" />, roles: ['admin'] },
     ],
@@ -99,6 +103,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Relatórios', href: '/reports', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Espelho de Ponto', href: '/espelho-ponto', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Trilha de Auditoria', href: '/auditoria', icon: <ScrollText className="h-4 w-4" />, roles: ['admin'] },
     ],
   },
   {

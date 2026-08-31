@@ -31,6 +31,9 @@ import MyOccurrences from "./pages/MyOccurrences";
 import PublicOccurrence from "./pages/PublicOccurrence";
 import DayOffs from "./pages/DayOffs";
 import MyDayOffs from "./pages/MyDayOffs";
+import AuditLog from "./pages/AuditLog";
+import MyJustifications from "./pages/MyJustifications";
+import Justifications from "./pages/Justifications";
 import MyShiftSwaps from "./pages/MyShiftSwaps";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
@@ -209,6 +212,33 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['employee']}>
             <MyDayOffs />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/auditoria"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AuditLog />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/justificativas"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Justifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/minhas-justificativas"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <MyJustifications />
           </ProtectedRoute>
         }
       />
