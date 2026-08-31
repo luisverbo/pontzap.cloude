@@ -351,6 +351,69 @@ export default function EspelhoPonto() {
     }
   }, [selectedEmployee, selectedMonth]);
 
+  const [exportingFiscal, setExportingFiscal] = useState(false);
+
+  // AFD/AEJ (Portaria 671) do mês selecionado, com TODOS os funcionários.
+  const exportFiscal = async (kind: 'afd' | 'aej') => {
+    setExportingFiscal(true);
+    try {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const start = startOfMonth(new Date(year, month - 1));
+      const end = endOfMonth(new Date(year, month - 1));
+
+      const ids = employees.map((e) => e.id);
+      if (!ids.length) { toast.error('Nenhum funcionário carregado.'); return; }
+
+      // CPF/PIS podem não estar no state — busca dedicada
+      const { data: legal } = await supabase
+        .from('employees')
+        .select('id, cpf, pis')
+        .in('id', ids);
+      const legalById = new Map((legal || []).map((e: any) => [e.id, e]));
+      const fiscalEmployees = employees.map((e) => ({
+        id: e.id,
+        name: e.name,
+        cpf: (legalById.get(e.id) as any)?.cpf ?? null,
+        pis: (legalById.get(e.id) as any)?.pis ?? null,
+      }));
+
+      const { data: recs, error } = await supabase
+        .from('clock_records')
+        .select('employee_id, timestamp, nsr, type')
+        .in('employee_id', ids)
+        .gte('timestamp', start.toISOString())
+        .lte('timestamp', end.toISOString())
+        .order('timestamp');
+      if (error) throw error;
+      if (!recs?.length) { toast.error('Nenhuma marcação no mês selecionado.'); return; }
+
+      const { generateAFD, generateAEJ } = await import('@/lib/fiscalExport');
+      const company = { name: companyInfo?.name || 'Empresa', cnpj: companyInfo?.cnpj || null };
+      const content = kind === 'afd'
+        ? generateAFD(company, fiscalEmployees, recs as any, start, end)
+        : generateAEJ(company, fiscalEmployees, recs as any, start, end);
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${kind.toUpperCase()}-${selectedMonth}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const semCpf = fiscalEmployees.filter((e) => !e.cpf).length;
+      toast.success(`${kind.toUpperCase()} gerado com ${recs.length} marcações.`);
+      if (semCpf > 0) {
+        toast.warning(`${semCpf} funcionário(s) sem CPF no cadastro — complete em Funcionários para o arquivo valer em fiscalização.`);
+      }
+    } catch (e: any) {
+      console.error('Erro ao gerar arquivo fiscal:', e);
+      toast.error(`Erro ao gerar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setExportingFiscal(false);
+    }
+  };
+
   const exportToPDF = async () => {
     if (!dailyRecords.length || !employeeInfo) return;
     
@@ -585,18 +648,28 @@ export default function EspelhoPonto() {
               Relatório oficial conforme Portaria 671/2021 - MTE
             </p>
           </div>
-          <Button 
-            variant="glow" 
-            onClick={exportToPDF} 
-            disabled={!dailyRecords.length || exporting}
-          >
-            {exporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Exportar PDF
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => exportFiscal('afd')} disabled={exportingFiscal}>
+              {exportingFiscal ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              AFD
+            </Button>
+            <Button variant="outline" onClick={() => exportFiscal('aej')} disabled={exportingFiscal}>
+              {exportingFiscal ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              AEJ
+            </Button>
+            <Button
+              variant="glow"
+              onClick={exportToPDF}
+              disabled={!dailyRecords.length || exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Exportar PDF
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

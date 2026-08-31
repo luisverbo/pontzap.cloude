@@ -19,11 +19,12 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Clock, MapPin, Loader2, Calendar, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, HandMetal, PenLine } from 'lucide-react';
+import { Clock, MapPin, Loader2, Calendar, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, HandMetal, PenLine, Download } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 import { CLOCK_TYPE_LABELS, ClockType } from '@/types';
+import { isNative } from '@/lib/native';
 
 type ClockRecord = Tables<'clock_records'>;
 
@@ -84,6 +85,106 @@ export default function MyHistory() {
       .eq('mes', viewMonth)
       .maybeSingle();
     setSignedAt((data as any)?.signed_at ?? null);
+  };
+
+  const [downloadingEspelho, setDownloadingEspelho] = useState(false);
+
+  // Espelho do mês em PDF, direto no app (compartilha no nativo, baixa na web)
+  const handleDownloadEspelho = async () => {
+    if (!employeeData) return;
+    setDownloadingEspelho(true);
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { saveOrShareBase64 } = await import('@/lib/nativeShare');
+
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name, cnpj')
+        .eq('id', (employeeData as any).company_id)
+        .maybeSingle();
+
+      const monthLabel = format(new Date(viewYear, viewMonth - 1), 'MMMM/yyyy', { locale: ptBR });
+      const monthRecords = records
+        .filter((r) => {
+          const d = new Date(r.timestamp);
+          return d.getMonth() + 1 === viewMonth && d.getFullYear() === viewYear;
+        })
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+      const byDay = new Map<string, ClockRecord[]>();
+      monthRecords.forEach((r) => {
+        const key = format(new Date(r.timestamp), 'yyyy-MM-dd');
+        (byDay.get(key) ?? byDay.set(key, []).get(key)!).push(r);
+      });
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const left = 15;
+      let y = 18;
+
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+      doc.text('Espelho de Ponto', left, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(110);
+      doc.text('Portaria MTP 671/2021', left, y + 4.5);
+      doc.setTextColor(30);
+      y += 12;
+      doc.setFontSize(10);
+      doc.text(`Empregador: ${company?.name || '—'}${(company as any)?.cnpj ? `  ·  CNPJ ${(company as any).cnpj}` : ''}`, left, y); y += 5;
+      doc.text(`Funcionário: ${profile?.name || '—'}`, left, y); y += 5;
+      doc.text(`Competência: ${monthLabel}`, left, y); y += 7;
+
+      // Cabeçalho da tabela
+      const cols = [left, left + 26, left + 52, left + 78, left + 104, left + 130];
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+      ['Dia', 'Entrada', 'Saída alm.', 'Volta alm.', 'Saída', 'NSR'].forEach((h, i) => doc.text(h, cols[i], y));
+      y += 2; doc.setDrawColor(180); doc.line(left, y, 195, y); y += 4.5;
+      doc.setFont('helvetica', 'normal');
+
+      const typeSlot: Record<string, number> = { entry: 1, lunch_out: 2, lunch_in: 3, exit: 4 };
+      [...byDay.entries()].forEach(([day, recs]) => {
+        if (y > 275) { doc.addPage(); y = 18; }
+        const row = ['—', '—', '—', '—'];
+        const nsrs: string[] = [];
+        recs.forEach((r) => {
+          const slot = typeSlot[r.type as string];
+          if (slot) row[slot - 1] = format(new Date(r.timestamp), 'HH:mm');
+          if ((r as any).nsr != null) nsrs.push(String((r as any).nsr));
+        });
+        doc.text(format(new Date(`${day}T12:00:00`), 'dd/MM EEE', { locale: ptBR }), cols[0], y);
+        row.forEach((v, i) => doc.text(v, cols[i + 1], y));
+        doc.text(nsrs.join(', ') || '—', cols[5], y);
+        y += 5;
+      });
+
+      if (byDay.size === 0) { doc.text('Nenhum registro no mês.', left, y); y += 6; }
+
+      y += 6;
+      doc.setDrawColor(180); doc.line(left, y, 195, y); y += 6;
+      doc.setFontSize(9);
+      if (signedAt) {
+        doc.text(
+          `Assinado eletronicamente pelo funcionário em ${format(new Date(signedAt), "dd/MM/yyyy 'às' HH:mm")}.`,
+          left, y
+        );
+      } else {
+        doc.setTextColor(110);
+        doc.text('Espelho ainda não assinado eletronicamente pelo funcionário.', left, y);
+        doc.setTextColor(30);
+      }
+      y += 5;
+      doc.setFontSize(8); doc.setTextColor(110);
+      doc.text(`Documento gerado pelo PONTZAP em ${format(new Date(), 'dd/MM/yyyy HH:mm')}.`, left, y);
+
+      const base64 = doc.output('datauristring').split(',')[1];
+      const filename = `espelho-ponto-${viewYear}-${String(viewMonth).padStart(2, '0')}.pdf`;
+      const result = await saveOrShareBase64(filename, base64, 'application/pdf', 'Espelho de Ponto');
+      if (result === 'error') toast.error('Não foi possível gerar o espelho.');
+      else if (result === 'downloaded') toast.success('Espelho baixado.');
+    } catch (e: any) {
+      console.error('Erro ao gerar espelho:', e);
+      toast.error(`Erro ao gerar espelho: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setDownloadingEspelho(false);
+    }
   };
 
   const handleSignEspelho = async () => {
@@ -515,6 +616,12 @@ export default function MyHistory() {
                   </Button>
                 </div>
               )}
+              <div className="border-t border-border/60 mt-3 pt-3">
+                <Button variant="outline" className="w-full" onClick={handleDownloadEspelho} disabled={downloadingEspelho}>
+                  {downloadingEspelho ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                  {isNative ? 'Compartilhar espelho (PDF)' : 'Baixar espelho (PDF)'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
