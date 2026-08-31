@@ -167,9 +167,20 @@ export default function DayOffs() {
     setSaving(true);
     try {
       const companyId = await resolveCompanyId();
-      let hourBankEntryId: string | null = null;
 
-      // Folga do banco de horas: lança o débito junto, para o saldo bater
+      // A folga entra PRIMEIRO: se falhar (ex.: data duplicada), nenhum débito
+      // órfão fica para trás no banco de horas.
+      const { data: created, error } = await supabase.from('day_offs').insert({
+        employee_id: form.employee_id,
+        company_id: companyId,
+        date: form.date,
+        kind: form.kind,
+        notes: form.notes.trim() || null,
+        substitute_id: form.substitute_id && form.substitute_id !== NONE ? form.substitute_id : null,
+      } as any).select('id').single();
+      if (error) throw error;
+
+      // Folga do banco de horas: lança o débito e vincula à folga
       if (form.kind === 'hour_bank' && form.discountHours) {
         const hours = parseFloat(form.discountHours.replace(',', '.'));
         if (!Number.isNaN(hours) && hours > 0) {
@@ -185,21 +196,13 @@ export default function DayOffs() {
             } as any)
             .select('id')
             .single();
-          if (entryErr) throw entryErr;
-          hourBankEntryId = entry.id;
+          if (entryErr) {
+            toast.warning('Folga criada, mas o débito no banco de horas falhou — lance manualmente.');
+          } else {
+            await supabase.from('day_offs').update({ hour_bank_entry_id: entry.id } as any).eq('id', created.id);
+          }
         }
       }
-
-      const { error } = await supabase.from('day_offs').insert({
-        employee_id: form.employee_id,
-        company_id: companyId,
-        date: form.date,
-        kind: form.kind,
-        notes: form.notes.trim() || null,
-        hour_bank_entry_id: hourBankEntryId,
-        substitute_id: form.substitute_id && form.substitute_id !== NONE ? form.substitute_id : null,
-      } as any);
-      if (error) throw error;
 
       toast.success('Folga escalada!');
       setDialogOpen(false);
