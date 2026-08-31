@@ -30,6 +30,7 @@ import { useSelfieCapture } from '@/hooks/useSelfieCapture';
 import { getCurrentPosition, GeoError, openLocationSettings, type GeoErrorKind } from '@/lib/nativeGeo';
 import { ensureCameraPermission } from '@/lib/nativePermissions';
 import { isNative } from '@/lib/native';
+import { scheduleForgotAlerts, cancelTodayForgotAlert } from '@/lib/forgotAlerts';
 import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -130,6 +131,18 @@ export default function ClockIn() {
   const [expandedPeriodos, setExpandedPeriodos] = useState<Set<string>>(new Set());
 
   const { todayRecords, clockIn, refetch } = useClockRecords(employeeData?.id);
+
+  // Lembrete "esqueceu de bater o ponto": agenda notificações locais para a
+  // próxima semana conforme a escala (só no app nativo)…
+  useEffect(() => {
+    if (isNative && employeeData?.id) scheduleForgotAlerts(employeeData.id);
+  }, [employeeData?.id]);
+
+  // …e silencia o lembrete de hoje assim que a entrada do dia existir
+  // (cobre QR, GPS, almoço e até a sincronização offline).
+  useEffect(() => {
+    if (isNative && todayRecords.some((r) => r.type === 'entry')) cancelTodayForgotAlert();
+  }, [todayRecords]);
   const { online, syncing, pendingCount, syncPendingRecords, updatePendingCount } = useOfflineSync();
 
   const togglePeriodo = (periodoKey: string) => {

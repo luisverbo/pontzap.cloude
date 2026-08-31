@@ -60,7 +60,7 @@ jobs:
         # mostrar o diálogo — GPS e câmera ficam mortos no app.
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
-          perl -0pi -e 's|(<uses-permission android:name="android.permission.INTERNET" ?/>)|$1\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.front" android:required="false" />|' "$MANIFEST"
+          perl -0pi -e 's|(<uses-permission android:name="android.permission.INTERNET" ?/>)|$1\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.front" android:required="false" />|' "$MANIFEST"
           echo "--- AndroidManifest.xml após patch ---"
           cat "$MANIFEST"
           grep -q 'android.permission.CAMERA' "$MANIFEST" || { echo "ERRO: patch de permissões não aplicado"; exit 1; }
