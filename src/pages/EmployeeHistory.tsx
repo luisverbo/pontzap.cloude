@@ -126,7 +126,7 @@ export default function EmployeeHistory() {
         // Fetch employee data
         const { data: empData, error: empError } = await supabase
           .from('employees')
-          .select('user_id, work_start_time, work_end_time, lunch_duration_minutes, count_early_entry_as_extra')
+          .select('user_id, work_start_time, work_end_time, lunch_duration_minutes, count_early_entry_as_extra, flexible_schedule')
           .eq('id', employeeId)
           .single();
 
@@ -257,7 +257,8 @@ export default function EmployeeHistory() {
         let isLate = false;
         let lateMinutes = 0;
 
-        if (entryRecord) {
+        // Horário livre: sem hora prevista de chegada, nunca há atraso
+        if (entryRecord && !(employeeData as any)?.flexible_schedule) {
           const schedule = getScheduleForDay(date);
 
           const entryTime = parseISO(entryRecord.timestamp);

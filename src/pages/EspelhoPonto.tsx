@@ -216,20 +216,22 @@ export default function EspelhoPonto() {
       // Get employee work schedule
       const { data: empData } = await supabase
         .from('employees')
-        .select('work_start_time, work_end_time, lunch_duration_minutes, schedule_type')
+        .select('work_start_time, work_end_time, lunch_duration_minutes, schedule_type, flexible_schedule')
         .eq('id', selectedEmployee)
         .single();
 
+      const isFlexible = !!(empData as any)?.flexible_schedule;
       const workStartTime = empData?.work_start_time || '08:00:00';
       const workEndTime = empData?.work_end_time || '17:00:00';
       const lunchMinutes = empData?.lunch_duration_minutes || 60;
       const scheduleType = empData?.schedule_type || 'regular';
-      
-      // Calculate expected work minutes per day
+
+      // Calculate expected work minutes per day. Horário livre não tem jornada
+      // prevista: as horas são apenas medidas, sem atraso nem hora extra.
       const [startHour, startMin] = workStartTime.split(':').map(Number);
       const [endHour, endMin] = workEndTime.split(':').map(Number);
-      const expectedWorkMinutes = scheduleType === '12x36' ? 12 * 60 : 
-        ((endHour * 60 + endMin) - (startHour * 60 + startMin) - lunchMinutes);
+      const expectedWorkMinutes = isFlexible ? 0 : (scheduleType === '12x36' ? 12 * 60 :
+        ((endHour * 60 + endMin) - (startHour * 60 + startMin) - lunchMinutes));
 
       // Group records by day
       const recordsByDay: Record<string, typeof clockRecords> = {};
@@ -281,19 +283,21 @@ export default function EspelhoPonto() {
           
           workedMinutes = Math.round((exitTime.getTime() - entryTime.getTime()) / 60000) - actualLunchMinutes;
           
-          if (workedMinutes > expectedWorkMinutes) {
+          if (!isFlexible && workedMinutes > expectedWorkMinutes) {
             overtimeMinutes = workedMinutes - expectedWorkMinutes;
           }
           
           totalWorked += workedMinutes;
           totalOvertime += overtimeMinutes;
           
-          // Check for late entry
-          const [expHour, expMin] = workStartTime.split(':').map(Number);
-          const expectedEntry = new Date(entryTime);
-          expectedEntry.setHours(expHour, expMin, 0, 0);
-          if (entryTime > expectedEntry) {
-            observations = 'Entrada atrasada';
+          // Check for late entry (horário livre não tem hora prevista)
+          if (!isFlexible) {
+            const [expHour, expMin] = workStartTime.split(':').map(Number);
+            const expectedEntry = new Date(entryTime);
+            expectedEntry.setHours(expHour, expMin, 0, 0);
+            if (entryTime > expectedEntry) {
+              observations = 'Entrada atrasada';
+            }
           }
         } else if (isWeekend(day)) {
           observations = 'Fim de semana';

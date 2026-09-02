@@ -91,7 +91,7 @@ serve(async (req: Request): Promise<Response> => {
 
       const { data: employees } = await supabase
         .from("employees")
-        .select("id, type, work_start_time, work_end_time, lunch_duration_minutes, valor_diaria")
+        .select("id, type, work_start_time, work_end_time, lunch_duration_minutes, valor_diaria, flexible_schedule")
         .eq("company_id", companyId)
         .eq("is_active", true);
       const empIds = (employees || []).map((e: any) => e.id);
@@ -148,13 +148,16 @@ serve(async (req: Request): Promise<Response> => {
           const sched = scheduleByEmp[empId];
           const emp = empById[empId];
 
-          if (entry && sched) {
+          // Horário livre: sem jornada prevista, não há atraso nem hora extra
+          const flexible = !!emp?.flexible_schedule;
+
+          if (entry && sched && !flexible) {
             const entryTime = new Date(entry.timestamp);
             const entryMinutes = entryTime.getHours() * 60 + entryTime.getMinutes();
             if (entryMinutes > sched.start + sched.tol) lateEmployeeIds.add(empId);
           }
 
-          if (entry && exit && emp?.work_start_time && emp?.work_end_time) {
+          if (!flexible && entry && exit && emp?.work_start_time && emp?.work_end_time) {
             const [ewh, ewm] = String(emp.work_start_time).split(":").map(Number);
             const [eeh, eem] = String(emp.work_end_time).split(":").map(Number);
             const expected = eeh * 60 + eem - (ewh * 60 + ewm) - (emp.lunch_duration_minutes || 60);

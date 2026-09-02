@@ -130,11 +130,15 @@ serve(async (req: Request): Promise<Response> => {
       // Only fixed employees have a workday to compare against
       const { data: employees } = await supabase
         .from("employees")
-        .select("id, type, work_start_time, work_end_time, lunch_duration_minutes")
+        .select("id, type, work_start_time, work_end_time, lunch_duration_minutes, flexible_schedule")
         .eq("company_id", cid)
         .eq("is_active", true);
 
-      const staff = (employees || []).filter((e: any) => e.type !== "substitute");
+      // Folguistas (diária) e quem tem horário livre não têm jornada prevista
+      // para comparar — ficam fora do banco de horas automático.
+      const staff = (employees || []).filter(
+        (e: any) => e.type !== "substitute" && !e.flexible_schedule,
+      );
       const empIds = staff.map((e: any) => e.id);
       if (empIds.length === 0) {
         results.push({ company_id: cid, entries: 0, note: "sem funcionários fixos" });

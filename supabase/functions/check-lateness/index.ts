@@ -148,10 +148,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Get fixed schedules for today (includes all schedule types: regular, 12x36, summer, rotating)
     const { data: fixedSchedules, error: fixedError } = await supabase
       .from("fixed_schedules")
-      .select("*, employees!inner(id, user_id, is_active, schedule_type)")
+      .select("*, employees!inner(id, user_id, is_active, schedule_type, flexible_schedule)")
       .eq("day_of_week", dayOfWeek)
       .eq("works", true)
-      .eq("employees.is_active", true);
+      .eq("employees.is_active", true)
+      .eq("employees.flexible_schedule", false);
 
     if (fixedError) {
       console.error("Error fetching fixed schedules:", fixedError);
@@ -160,9 +161,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Get punctual schedules for today (substitutes/folguistas - these OVERRIDE fixed schedules)
     const { data: punctualSchedules, error: punctualError } = await supabase
       .from("punctual_schedules")
-      .select("*, employees!inner(id, user_id, is_active, schedule_type)")
+      .select("*, employees!inner(id, user_id, is_active, schedule_type, flexible_schedule)")
       .eq("date", today)
-      .eq("employees.is_active", true);
+      .eq("employees.is_active", true)
+      .eq("employees.flexible_schedule", false);
 
     if (punctualError) {
       console.error("Error fetching punctual schedules:", punctualError);

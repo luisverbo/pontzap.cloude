@@ -23,6 +23,18 @@ export async function scheduleForgotAlerts(employeeId: string): Promise<void> {
       if (perm.display !== 'granted') return;
     }
 
+    // Horário livre não tem hora marcada para chegar — nada a lembrar.
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('flexible_schedule')
+      .eq('id', employeeId)
+      .maybeSingle();
+    if ((emp as any)?.flexible_schedule) {
+      const { notifications: old } = await LocalNotifications.getPending();
+      if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
+      return;
+    }
+
     const [{ data: fixed }, { data: punctual }] = await Promise.all([
       supabase
         .from('fixed_schedules')

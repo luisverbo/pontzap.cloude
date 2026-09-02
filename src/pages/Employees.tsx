@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,7 @@ export default function Employees() {
     work_start_time: '08:00',
     work_end_time: '17:00',
     lunch_duration_minutes: 60,
+    flexible_schedule: false,
     count_early_entry_as_extra: false,
     overtime_compensation_mode: 'cash' as 'cash' | 'time_off',
     overtime_rate: null as number | null,
@@ -131,6 +133,7 @@ export default function Employees() {
       work_start_time: (employee as any).work_start_time?.substring(0, 5) || '08:00',
       work_end_time: (employee as any).work_end_time?.substring(0, 5) || '17:00',
       lunch_duration_minutes: (employee as any).lunch_duration_minutes || 60,
+      flexible_schedule: !!(employee as any).flexible_schedule,
       count_early_entry_as_extra: (employee as any).count_early_entry_as_extra || false,
       overtime_compensation_mode: (employee as any).overtime_compensation_mode || 'cash',
       overtime_rate: (employee as any).overtime_rate || null,
@@ -143,6 +146,7 @@ export default function Employees() {
     setSaving(true);
     try {
       await updateEmployee(selectedEmployee.id, {
+        flexible_schedule: scheduleForm.flexible_schedule,
         work_start_time: scheduleForm.work_start_time + ':00',
         work_end_time: scheduleForm.work_end_time + ':00',
         lunch_duration_minutes: scheduleForm.lunch_duration_minutes,
@@ -444,6 +448,11 @@ export default function Employees() {
                     <Badge variant={employee.is_active ? 'success' : 'secondary'} className="font-medium">
                       {employee.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
+                    {(employee as any).flexible_schedule && (
+                      <Badge variant="outline" className="font-medium">
+                        Horário livre
+                      </Badge>
+                    )}
                     {!employee.invitation_accepted && (
                       <Badge variant="warning" className="font-medium">
                         Convite Pendente
@@ -684,46 +693,66 @@ export default function Employees() {
                 Configure a jornada padrão para cálculo automático de horas extras.
               </p>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Entrada</Label>
-                  <Input
-                    type="time"
-                    value={scheduleForm.work_start_time}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, work_start_time: e.target.value })}
-                  />
+              {/* Horário livre: sem jornada prevista */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-border/60 p-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">Horário livre (sem jornada fixa)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    O ponto continua sendo registrado e as horas medidas, mas sem horário
+                    definido: não gera atraso, não entra no banco de horas automático e o
+                    almoço é livre.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Saída</Label>
-                  <Input
-                    type="time"
-                    value={scheduleForm.work_end_time}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, work_end_time: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Duração do almoço (minutos)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="180"
-                  value={scheduleForm.lunch_duration_minutes}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, lunch_duration_minutes: parseInt(e.target.value) || 0 })}
+                <Switch
+                  checked={scheduleForm.flexible_schedule}
+                  onCheckedChange={(v) => setScheduleForm({ ...scheduleForm, flexible_schedule: v })}
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="count_early"
-                  checked={scheduleForm.count_early_entry_as_extra}
-                  onCheckedChange={(checked) =>
-                    setScheduleForm({ ...scheduleForm, count_early_entry_as_extra: checked as boolean })
-                  }
-                />
-                <Label htmlFor="count_early">Contar entrada antecipada como hora extra</Label>
-              </div>
+              {!scheduleForm.flexible_schedule && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Entrada</Label>
+                      <Input
+                        type="time"
+                        value={scheduleForm.work_start_time}
+                        onChange={(e) => setScheduleForm({ ...scheduleForm, work_start_time: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Saída</Label>
+                      <Input
+                        type="time"
+                        value={scheduleForm.work_end_time}
+                        onChange={(e) => setScheduleForm({ ...scheduleForm, work_end_time: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Duração do almoço (minutos)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="180"
+                      value={scheduleForm.lunch_duration_minutes}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, lunch_duration_minutes: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="count_early"
+                      checked={scheduleForm.count_early_entry_as_extra}
+                      onCheckedChange={(checked) =>
+                        setScheduleForm({ ...scheduleForm, count_early_entry_as_extra: checked as boolean })
+                      }
+                    />
+                    <Label htmlFor="count_early">Contar entrada antecipada como hora extra</Label>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label>Compensação de Horas Extras</Label>

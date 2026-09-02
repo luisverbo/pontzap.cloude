@@ -39,6 +39,7 @@ interface EmployeeData {
   work_end_time: string | null;
   lunch_duration_minutes: number | null;
   company_id: string | null;
+  flexible_schedule?: boolean | null;
 }
 
 interface DayGroup {
@@ -246,7 +247,7 @@ export default function MyHistory() {
         // Fetch employee data
         const { data: empData, error: empError } = await supabase
           .from('employees')
-          .select('id, work_start_time, work_end_time, lunch_duration_minutes, company_id')
+          .select('id, work_start_time, work_end_time, lunch_duration_minutes, company_id, flexible_schedule')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -373,7 +374,8 @@ export default function MyHistory() {
         let isLate = false;
         let lateMinutes = 0;
 
-        if (entryRecord) {
+        // Horário livre: não existe hora de chegada prevista, então nunca há atraso
+        if (entryRecord && !employeeData?.flexible_schedule) {
           const schedule = getScheduleForDay(date);
 
           const entryTime = parseISO(entryRecord.timestamp);
