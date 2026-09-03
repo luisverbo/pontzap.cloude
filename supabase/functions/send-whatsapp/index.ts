@@ -56,21 +56,6 @@ const getNotificationField = (type: string): keyof NotificationRecipient => {
   };
   return fields[type] || "receives_entry";
 };
-
-
-    }
-  } catch (_e) { /* table may not exist yet */ }
-
-  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
-  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instance = Deno.env.get("EVOLUTION_INSTANCE");
-  if (baseUrl && apiKey && instance) {
-    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
-  }
-  return null;
-};
-
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

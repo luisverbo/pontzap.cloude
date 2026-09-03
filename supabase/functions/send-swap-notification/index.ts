@@ -16,22 +16,6 @@ interface SendSwapNotificationRequest {
   swapId: string;
   notificationType: "requested" | "accepted" | "approved" | "rejected";
 }
-
-
-
-    }
-  } catch (_e) { /* table may not exist yet */ }
-  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
-  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instance = Deno.env.get("EVOLUTION_INSTANCE");
-  if (baseUrl && apiKey && instance) {
-    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
-  }
-  return null;
-};
-
-
-
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('pt-BR');

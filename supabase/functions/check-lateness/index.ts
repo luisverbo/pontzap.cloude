@@ -21,21 +21,6 @@ interface NotificationRecipient {
   receives_alerts: boolean;
   is_location_admin: boolean;
 }
-
-
-
-    }
-  } catch (_e) { /* table may not exist yet */ }
-  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
-  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instance = Deno.env.get("EVOLUTION_INSTANCE");
-  if (baseUrl && apiKey && instance) {
-    return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
-  }
-  return null;
-};
-
-
 /**
  * Calcula se hoje é dia de trabalho para escala 12x36
  * Na escala 12x36: trabalha 12h, descansa 36h (1 dia trabalho, ~1.5 dias folga)
