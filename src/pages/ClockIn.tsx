@@ -99,6 +99,7 @@ export default function ClockIn() {
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [employeeData, setEmployeeData] = useState<{ id: string; locationId: string | null; companyId: string | null; type: string; valorDiaria: number | null } | null>(null);
   const [requireClockPhoto, setRequireClockPhoto] = useState(false);
+  const [punchCooldownMinutes, setPunchCooldownMinutes] = useState(15);
   const { capture: captureSelfie, overlay: selfieOverlay } = useSelfieCapture();
   const [loadingEmployee, setLoadingEmployee] = useState(true);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -144,6 +145,16 @@ export default function ClockIn() {
     if (isNative && todayRecords.some((r) => r.type === 'entry')) cancelTodayForgotAlert();
   }, [todayRecords]);
   const { online, syncing, pendingCount, syncPendingRecords, updatePendingCount } = useOfflineSync();
+
+  // Trava anti-toque-acidental: minutos que faltam desde a última batida.
+  // currentTime é atualizado a cada segundo, então isto conta sozinho.
+  const cooldownRemainingMin = (() => {
+    if (punchCooldownMinutes <= 0 || todayRecords.length === 0) return 0;
+    const lastMs = Math.max(...todayRecords.map((r) => new Date(r.timestamp).getTime()));
+    const remainingMs = punchCooldownMinutes * 60000 - (currentTime.getTime() - lastMs);
+    return remainingMs > 0 ? Math.ceil(remainingMs / 60000) : 0;
+  })();
+  const inCooldown = cooldownRemainingMin > 0;
 
   const togglePeriodo = (periodoKey: string) => {
     setExpandedPeriodos(prev => {
@@ -309,7 +320,8 @@ export default function ClockIn() {
               is_primary
             ),
             companies(
-              require_clock_photo
+              require_clock_photo,
+              punch_cooldown_minutes
             )
           `)
           .eq('user_id', user.id)
@@ -329,6 +341,7 @@ export default function ClockIn() {
             valorDiaria: (employee as any).valor_diaria ?? null,
           });
           setRequireClockPhoto(!!(employee as any).companies?.require_clock_photo);
+          setPunchCooldownMinutes(Number((employee as any).companies?.punch_cooldown_minutes ?? 15));
         }
       } catch (error) {
         console.error('Error fetching employee data:', error);
@@ -626,6 +639,12 @@ export default function ClockIn() {
               )}
             </div>
 
+            {inCooldown && (
+              <p className="mt-3 text-xs sm:text-sm text-warning font-medium">
+                Você acabou de bater o ponto. Aguarde {cooldownRemainingMin} min para registrar o próximo.
+              </p>
+            )}
+
             {/* Helpful recovery actions when there's no GPS fix */}
             {!location && !refreshingLocation && locationError && (
               <div className="mt-3 space-y-2">
@@ -679,7 +698,7 @@ export default function ClockIn() {
                           : 'bg-accent hover:bg-accent/90 text-accent-foreground'
                     }`}
                     onClick={() => handleEntryExitClick(btn.type)}
-                    disabled={loading !== null || alreadyClocked || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
+                    disabled={loading !== null || alreadyClocked || inCooldown || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
                   >
                     {loading === btn.type ? (
                       <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin" />
@@ -719,7 +738,7 @@ export default function ClockIn() {
                     size="xl"
                     className={`${btn.color} text-white flex-col h-20 sm:h-24 gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl touch-manipulation`}
                     onClick={() => handleLunchClockIn(btn.type)}
-                    disabled={loading !== null || alreadyClocked || !location || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
+                    disabled={loading !== null || alreadyClocked || inCooldown || !location || (!employeeData?.locationId && employeeData?.type !== 'substitute')}
                   >
                     {loading === btn.type ? (
                       <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />

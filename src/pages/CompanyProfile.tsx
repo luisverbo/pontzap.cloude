@@ -29,7 +29,26 @@ export default function CompanyProfile() {
 
   // Selfie/photo on clock-in — opt-in, per-company (anti-fraud)
   const [requirePhoto, setRequirePhoto] = useState(false);
+  const [cooldownMinutes, setCooldownMinutes] = useState(15);
+  const [cooldownSaving, setCooldownSaving] = useState(false);
   const [photoSaving, setPhotoSaving] = useState(false);
+
+  const handleSaveCooldown = async () => {
+    if (!companyId) { toast.error('Empresa não encontrada'); return; }
+    setCooldownSaving(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ punch_cooldown_minutes: Math.max(0, Math.min(120, cooldownMinutes)) } as any)
+        .eq('id', companyId);
+      if (error) throw error;
+      toast.success('Intervalo entre batidas salvo.');
+    } catch (e: any) {
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setCooldownSaving(false);
+    }
+  };
 
   const handleTogglePhoto = async (value: boolean) => {
     if (!companyId) { toast.error('Empresa não encontrada'); return; }
@@ -116,7 +135,7 @@ export default function CompanyProfile() {
         setCompanyId(id);
         const { data } = await supabase
           .from('companies')
-          .select('name, cnpj, email, phone, address, cep, city, state, require_clock_photo')
+          .select('name, cnpj, email, phone, address, cep, city, state, require_clock_photo, punch_cooldown_minutes')
           .eq('id', id)
           .maybeSingle();
         if (data) {
@@ -131,6 +150,7 @@ export default function CompanyProfile() {
             state: (data as any).state || '',
           });
           setRequirePhoto(!!(data as any).require_clock_photo);
+          setCooldownMinutes(Number((data as any).punch_cooldown_minutes ?? 15));
         }
         await loadSummaryConfig(id);
       } catch (e) {
@@ -257,6 +277,28 @@ export default function CompanyProfile() {
                 disabled={photoSaving}
                 onCheckedChange={handleTogglePhoto}
               />
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-border/60 p-3">
+              <Label>Intervalo mínimo entre batidas (minutos)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={cooldownMinutes}
+                  onChange={(e) => setCooldownMinutes(parseInt(e.target.value || '0', 10))}
+                  className="max-w-32"
+                />
+                <Button variant="outline" onClick={handleSaveCooldown} disabled={cooldownSaving}>
+                  {cooldownSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Salvar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Depois de bater o ponto, os botões ficam travados por esse tempo — evita
+                que o funcionário aperte Saída sem querer logo após a Entrada. Use 0 para desligar.
+              </p>
             </div>
           </CardContent>
         </Card>

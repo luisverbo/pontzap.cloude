@@ -190,6 +190,44 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // 5c. Intervalo mínimo entre batidas — protege contra o toque acidental
+    //     (bateu Entrada e encostou em Saída logo em seguida).
+    {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("punch_cooldown_minutes")
+        .eq("id", employee.company_id)
+        .maybeSingle();
+
+      const cooldownMin = Number((company as any)?.punch_cooldown_minutes ?? 15);
+      if (cooldownMin > 0) {
+        const { data: last } = await supabase
+          .from("clock_records")
+          .select("timestamp, type")
+          .eq("employee_id", employee.id)
+          .order("timestamp", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (last?.timestamp) {
+          const elapsedMs = new Date(timestamp).getTime() - new Date(last.timestamp).getTime();
+          const remainingMs = cooldownMin * 60000 - elapsedMs;
+          if (elapsedMs >= 0 && remainingMs > 0) {
+            const remainingMin = Math.ceil(remainingMs / 60000);
+            const labels: Record<string, string> = {
+              entry: "Entrada", lunch_out: "Saída para Almoço",
+              lunch_in: "Retorno do Almoço", exit: "Saída",
+            };
+            return json({
+              error: `Você registrou ${labels[last.type] || "um ponto"} agora há pouco. Aguarde ${remainingMin} min para bater novamente.`,
+              cooldown: true,
+              remainingMinutes: remainingMin,
+            }, 429);
+          }
+        }
+      }
+    }
+
     // 6. Insert the clock record
     const { data: record, error: insertError } = await supabase
       .from("clock_records")
