@@ -18,7 +18,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
+        # A ação consulta a API do GitHub para descobrir a última versão da CLI.
+        # Sem token essa consulta é anônima (60/h, compartilhada entre todos os
+        # runners) e vira "rate limit exceeded". Autenticada, o limite é 1000/h.
         uses: supabase/setup-cli@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           version: latest
 
