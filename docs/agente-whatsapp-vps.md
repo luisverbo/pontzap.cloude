@@ -45,7 +45,7 @@ já está lá.
 
 ```js
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 
 const PORT = process.env.PORT || 3001;                 // porta EXCLUSIVA deste serviço
@@ -57,7 +57,9 @@ let sock = null;
 async function start() {
   // Sessão em pasta própria — não mexe na sessão do outro agente
   const { state, saveCreds } = await useMultiFileAuthState('./auth-pontzap');
-  sock = makeWASocket({ auth: state, printQRInTerminal: false });
+  // Usa a versão de protocolo mais recente — evita "connection closed" por versão antiga
+  const { version } = await fetchLatestBaileysVersion();
+  sock = makeWASocket({ version, auth: state, printQRInTerminal: false, browser: ['PONTZAP', 'Chrome', '1.0'] });
 
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', ({ connection, qr, lastDisconnect }) => {
