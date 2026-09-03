@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'supabase/functions/**'
+      - 'supabase/config.toml'          # verify_jwt por função
+      - '.github/workflows/deploy-edge-functions.yml'
   workflow_dispatch: # permite rodar manualmente pelo painel do GitHub
 
 jobs:
