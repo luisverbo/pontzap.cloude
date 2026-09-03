@@ -37,12 +37,23 @@ export function useCompanyLimits() {
             .select('company_id')
             .eq('user_id', user.id)
             .maybeSingle();
-          
-          if (employeeData?.company_id) {
+
+          // O dono da empresa não tem linha em employees — cai para admin_user_id
+          let resolvedCompanyId = employeeData?.company_id ?? null;
+          if (!resolvedCompanyId) {
+            const { data: owned } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('admin_user_id', user.id)
+              .maybeSingle();
+            resolvedCompanyId = owned?.id ?? null;
+          }
+
+          if (resolvedCompanyId) {
             const { data: company } = await supabase
               .from('companies')
               .select('max_employees, max_locations')
-              .eq('id', employeeData.company_id)
+              .eq('id', resolvedCompanyId)
               .maybeSingle();
             
             if (company) {
@@ -51,12 +62,12 @@ export function useCompanyLimits() {
                 supabase
                   .from('employees')
                   .select('id', { count: 'exact', head: true })
-                  .eq('company_id', employeeData.company_id)
+                  .eq('company_id', resolvedCompanyId)
                   .eq('is_active', true),
                 supabase
                   .from('locations')
                   .select('id', { count: 'exact', head: true })
-                  .eq('company_id', employeeData.company_id)
+                  .eq('company_id', resolvedCompanyId)
               ]);
               
               setLimits({

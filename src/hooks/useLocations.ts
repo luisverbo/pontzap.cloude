@@ -8,7 +8,10 @@ type Location = Tables<'locations'>;
 type LocationInsert = TablesInsert<'locations'>;
 type LocationUpdate = TablesUpdate<'locations'>;
 
-// Helper function to get current user's company_id
+// Helper function to get current user's company_id.
+// O dono da empresa normalmente NÃO tem linha em employees, então a busca
+// precisa cair para companies.admin_user_id — sem isso, cadastrar local
+// falhava com "Não foi possível identificar a empresa".
 async function getUserCompanyId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -18,8 +21,15 @@ async function getUserCompanyId(): Promise<string | null> {
     .select('company_id')
     .eq('user_id', user.id)
     .maybeSingle();
+  if (employee?.company_id) return employee.company_id;
 
-  return employee?.company_id || null;
+  const { data: owned } = await supabase
+    .from('companies')
+    .select('id')
+    .eq('admin_user_id', user.id)
+    .maybeSingle();
+
+  return owned?.id ?? null;
 }
 
 export function useLocations() {
