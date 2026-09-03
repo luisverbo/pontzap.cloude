@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
-import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { getCompanyScope } from '@/lib/companyScope';
 
 type Employee = Tables<'employees'>;
 type EmployeeLocation = Tables<'employee_locations'>;
@@ -21,22 +21,19 @@ export interface EmployeeWithProfile extends Employee {
 export function useEmployees() {
   const [employees, setEmployees] = useState<EmployeeWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [needsCompanySelection, setNeedsCompanySelection] = useState(false);
 
   const fetchEmployees = async () => {
     try {
-      const impersonatedCompanyId = getImpersonatedCompanyId();
-      
-      // Fetch employees - filter by company if impersonating
-      let query = supabase
+      // Sempre no escopo de UMA empresa. Sem isso, o master via todas juntas.
+      const scope = await getCompanyScope();
+      setNeedsCompanySelection(scope.needsSelection);
+
+      const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
         .select('*')
+        .eq('company_id', scope.companyId)
         .order('created_at', { ascending: false });
-      
-      if (impersonatedCompanyId) {
-        query = query.eq('company_id', impersonatedCompanyId);
-      }
-
-      const { data: employeesData, error: employeesError } = await query;
 
       if (employeesError) throw employeesError;
 
@@ -153,6 +150,7 @@ export function useEmployees() {
   return {
     employees,
     loading,
+    needsCompanySelection,
     updateEmployee,
     assignLocations,
     deleteEmployee,

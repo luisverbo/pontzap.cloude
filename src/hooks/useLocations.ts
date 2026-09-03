@@ -2,54 +2,28 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
-import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { getCompanyScope, NO_COMPANY_ID } from '@/lib/companyScope';
 
 type Location = Tables<'locations'>;
 type LocationInsert = TablesInsert<'locations'>;
 type LocationUpdate = TablesUpdate<'locations'>;
 
-// Helper function to get current user's company_id.
-// O dono da empresa normalmente NÃO tem linha em employees, então a busca
-// precisa cair para companies.admin_user_id — sem isso, cadastrar local
-// falhava com "Não foi possível identificar a empresa".
-async function getUserCompanyId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: employee } = await supabase
-    .from('employees')
-    .select('company_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (employee?.company_id) return employee.company_id;
-
-  const { data: owned } = await supabase
-    .from('companies')
-    .select('id')
-    .eq('admin_user_id', user.id)
-    .maybeSingle();
-
-  return owned?.id ?? null;
-}
-
 export function useLocations() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const [needsCompanySelection, setNeedsCompanySelection] = useState(false);
 
   const fetchLocations = async () => {
     try {
-      const impersonatedCompanyId = getImpersonatedCompanyId();
-      
-      let query = supabase
+      // Sempre no escopo de UMA empresa (evita o master ver todas juntas)
+      const scope = await getCompanyScope();
+      setNeedsCompanySelection(scope.needsSelection);
+
+      const { data, error } = await supabase
         .from('locations')
         .select('*')
+        .eq('company_id', scope.companyId)
         .order('name');
-      
-      if (impersonatedCompanyId) {
-        query = query.eq('company_id', impersonatedCompanyId);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setLocations(data || []);
@@ -63,17 +37,18 @@ export function useLocations() {
 
   const addLocation = async (location: Omit<LocationInsert, 'id' | 'created_at' | 'updated_at' | 'qr_code' | 'company_id'>) => {
     try {
-      // Get company_id: prioritize impersonated company, then user's own company
-      const impersonatedCompanyId = getImpersonatedCompanyId();
-      const companyId = impersonatedCompanyId || await getUserCompanyId();
-
-      if (!companyId) {
+      // Mesmo escopo do fetch: empresa acessada, ou a do próprio usuário
+      const scope = await getCompanyScope();
+      if (scope.needsSelection) {
+        throw new Error('Escolha uma empresa na barra do topo antes de cadastrar o local.');
+      }
+      if (scope.companyId === NO_COMPANY_ID) {
         throw new Error('Não foi possível identificar a empresa. Faça login novamente.');
       }
 
       const { data, error } = await supabase
         .from('locations')
-        .insert({ ...location, company_id: companyId })
+        .insert({ ...location, company_id: scope.companyId })
         .select()
         .single();
 
@@ -132,6 +107,7 @@ export function useLocations() {
   return {
     locations,
     loading,
+    needsCompanySelection,
     addLocation,
     updateLocation,
     deleteLocation,

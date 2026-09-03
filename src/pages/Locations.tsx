@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { MasterCompanyNotice } from '@/components/MasterCompanyNotice';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ import type { Tables } from '@/integrations/supabase/types';
 type Location = Tables<'locations'>;
 
 export default function Locations() {
-  const { locations, loading, addLocation, updateLocation, deleteLocation } = useLocations();
+  const { locations, loading, needsCompanySelection, addLocation, updateLocation, deleteLocation } = useLocations();
   const { limits } = useCompanyLimits();
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -188,6 +189,16 @@ export default function Locations() {
               <Skeleton key={i} className="h-32 rounded-xl" />
             ))}
           </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (needsCompanySelection) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <MasterCompanyNotice />
         </div>
       </MainLayout>
     );

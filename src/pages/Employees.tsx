@@ -36,10 +36,11 @@ import { useCompanyLimits } from '@/hooks/useCompanyLimits';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
+import { MasterCompanyNotice } from '@/components/MasterCompanyNotice';
 
 export default function Employees() {
   const navigate = useNavigate();
-  const { employees, loading, updateEmployee, assignLocations, deleteEmployee, refetch } = useEmployees();
+  const { employees, loading, needsCompanySelection, updateEmployee, assignLocations, deleteEmployee, refetch } = useEmployees();
   const { locations } = useLocations();
   const { limits } = useCompanyLimits();
   const [searchTerm, setSearchTerm] = useState('');
@@ -329,6 +330,16 @@ export default function Employees() {
               <Skeleton key={i} className="h-32 rounded-xl" />
             ))}
           </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (needsCompanySelection) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <MasterCompanyNotice />
         </div>
       </MainLayout>
     );
