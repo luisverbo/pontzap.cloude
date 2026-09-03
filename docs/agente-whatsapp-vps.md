@@ -17,6 +17,17 @@ Resposta 2xx  → o PONTZAP considera enviado
 Resposta 4xx/5xx → registra a falha no log
 ```
 
+Para aparecer o QR Code no Painel Master, o agente também expõe (mesmo token):
+
+```
+GET   <base>/status  → { "connected": true|false, "qr": "data:image/png;base64,..." }
+POST  <base>/logout  → encerra a sessão e gera um QR novo
+```
+
+Onde `<base>` é a URL de envio sem o `/send`. O painel nunca fala direto com a
+VPS: a chamada passa pela edge function `whatsapp-agent` (só master), o que
+evita o bloqueio de conteúdo misto (painel HTTPS × agente HTTP).
+
 O telefone já vai normalizado (só dígitos, com o 55 na frente).
 
 ## Onde configurar
@@ -24,7 +35,7 @@ O telefone já vai normalizado (só dígitos, com o 55 na frente).
 Painel Master → aba WhatsApp → **Conexão de WhatsApp**:
 
 - **Provedor:** `Meu agente (VPS)`
-- **URL do endpoint de envio:** ex. `https://sua-vps.com:3001/send`
+- **URL do endpoint de envio:** ex. `http://SEU_IP:3011/send`
 - **Token de acesso:** um segredo forte, qualquer string
 - **Ativa:** marcado
 
@@ -45,30 +56,38 @@ já está lá.
 
 ```js
 const express = require('express');
+const fs = require('fs');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 
-const PORT = process.env.PORT || 3001;                 // porta EXCLUSIVA deste serviço
+const PORT = process.env.PORT || 3011;                 // porta EXCLUSIVA deste serviço
 const TOKEN = process.env.PONTZAP_TOKEN;               // o mesmo token do painel
 if (!TOKEN) { console.error('Defina PONTZAP_TOKEN'); process.exit(1); }
 
+const AUTH_DIR = './auth-pontzap';                     // sessão própria
 let sock = null;
+let connected = false;
+let lastQR = null;                                     // data URL PNG do QR atual
 
 async function start() {
-  // Sessão em pasta própria — não mexe na sessão do outro agente
-  const { state, saveCreds } = await useMultiFileAuthState('./auth-pontzap');
-  // Usa a versão de protocolo mais recente — evita "connection closed" por versão antiga
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
   sock = makeWASocket({ version, auth: state, printQRInTerminal: false, browser: ['PONTZAP', 'Chrome', '1.0'] });
 
   sock.ev.on('creds.update', saveCreds);
-  sock.ev.on('connection.update', ({ connection, qr, lastDisconnect }) => {
-    if (qr) qrcode.generate(qr, { small: true });       // leia com o WhatsApp do número
-    if (connection === 'open') console.log('WhatsApp conectado');
+  sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
+    if (qr) {
+      // Guarda como imagem para o painel do PONTZAP exibir
+      lastQR = await QRCode.toDataURL(qr).catch(() => null);
+      connected = false;
+      console.log('QR Code novo disponivel (leia pelo painel ou por /status)');
+    }
+    if (connection === 'open') { connected = true; lastQR = null; console.log('\n>>> WHATSAPP CONECTADO! <<<\n'); }
     if (connection === 'close') {
+      connected = false;
       const code = lastDisconnect?.error?.output?.statusCode;
-      if (code !== DisconnectReason.loggedOut) start(); // reconecta sozinho
-      else console.error('Sessão encerrada — apague ./auth-pontzap e leia o QR de novo');
+      if (code !== DisconnectReason.loggedOut) start();
+      else { try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {} start(); }
     }
   });
 }
@@ -77,14 +96,19 @@ start();
 const app = express();
 app.use(express.json());
 
-app.post('/send', async (req, res) => {
+const auth = (req, res) => {
   if (req.get('authorization') !== `Bearer ${TOKEN}`) {
-    return res.status(401).json({ error: 'token inválido' });
+    res.status(401).json({ error: 'token invalido' });
+    return false;
   }
-  const { phone, message } = req.body || {};
-  if (!phone || !message) return res.status(400).json({ error: 'phone e message são obrigatórios' });
-  if (!sock) return res.status(503).json({ error: 'WhatsApp ainda não conectado' });
+  return true;
+};
 
+app.post('/send', async (req, res) => {
+  if (!auth(req, res)) return;
+  const { phone, message } = req.body || {};
+  if (!phone || !message) return res.status(400).json({ error: 'phone e message sao obrigatorios' });
+  if (!sock || !connected) return res.status(503).json({ error: 'WhatsApp nao conectado' });
   try {
     await sock.sendMessage(`${String(phone).replace(/\D/g, '')}@s.whatsapp.net`, { text: message });
     res.json({ ok: true });
@@ -94,7 +118,27 @@ app.post('/send', async (req, res) => {
   }
 });
 
-app.get('/health', (_req, res) => res.json({ ok: true, connected: !!sock }));
+// Consumido pelo Painel Master: status + QR quando desconectado
+app.get('/status', (req, res) => {
+  if (!auth(req, res)) return;
+  res.json({ connected, qr: connected ? null : lastQR });
+});
+
+// Trocar de número: encerra a sessão e força um QR novo
+app.post('/logout', async (req, res) => {
+  if (!auth(req, res)) return;
+  try {
+    try { await sock?.logout(); } catch {}
+    try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
+    connected = false; lastQR = null;
+    setTimeout(start, 1000);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+app.get('/health', (_req, res) => res.json({ ok: true, connected }));
 
 app.listen(PORT, () => console.log(`PONTZAP WhatsApp ouvindo na porta ${PORT}`));
 ```
@@ -104,33 +148,37 @@ Instalação:
 ```bash
 mkdir -p ~/pontzap-whatsapp && cd ~/pontzap-whatsapp
 npm init -y
-npm i express @whiskeysockets/baileys qrcode-terminal
+npm i express @whiskeysockets/baileys qrcode
 
-# rode uma vez no terminal para ler o QR Code
+# primeira vez: rode no terminal para conectar o numero
 PONTZAP_TOKEN='seu-token-secreto' node pontzap-whatsapp.js
 
-# depois de conectado, deixe rodando como serviço
+# depois, deixe rodando como servico
 npm i -g pm2
-PONTZAP_TOKEN='seu-token-secreto' pm2 start pontzap-whatsapp.js --name pontzap-whatsapp
-pm2 save
+PORT=3011 PONTZAP_TOKEN='seu-token-secreto' pm2 start pontzap-whatsapp.js --name pontzap-whatsapp
+pm2 save && pm2 startup
 ```
+
+Da primeira vez o QR aparece nos logs (`pm2 logs pontzap-whatsapp`). Depois disso,
+trocar de número é feito pelo **Painel Master → WhatsApp → Número do WhatsApp**,
+sem abrir o terminal.
 
 ### Como não atrapalhar o agente que já está na VPS
 
 | Ponto | Como fica isolado |
 |---|---|
-| Porta | `3001` (ou outra livre) — confira com `ss -ltnp` antes |
+| Porta | `3011` (ou outra livre) — confira com `ss -ltnp \| grep 3011` antes |
 | Processo | Nome próprio no PM2: `pontzap-whatsapp` |
 | Sessão do WhatsApp | Pasta `./auth-pontzap`, separada da sessão do outro agente |
 | Dependências | Pasta própria, `node_modules` isolado |
 
 Se o outro agente usa Docker, dá para subir este em um container próprio
-mapeando só a porta 3001 — mesmo efeito.
+mapeando só a porta 3011 — mesmo efeito.
 
 ### HTTPS
 
 O Supabase chama a URL pela internet. Se a VPS já tem Nginx com domínio, o
-mais simples é criar um subdomínio apontando para a porta 3001 e deixar o
+mais simples é criar um subdomínio apontando para a porta 3011 e deixar o
 Nginx cuidar do certificado. Sem HTTPS, o token trafega em texto puro.
 
 ## ⚠️ O ponto mais importante: separe os números

@@ -40,3 +40,6 @@ verify_jwt = false
 # O JWT é validado dentro da função (o cron chama sem token; pedidos de uma
 # empresa específica exigem login de admin daquela empresa).
 verify_jwt = false
+
+[functions.whatsapp-agent]
+verify_jwt = true

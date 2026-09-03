@@ -176,6 +176,61 @@ export default function MasterPanel() {
   });
   const [evolutionSaving, setEvolutionSaving] = useState(false);
 
+  // Conexão do número no agente da VPS (QR direto no painel)
+  const [agentStatus, setAgentStatus] = useState<{ connected: boolean; qr?: string | null } | null>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
+
+  const checkAgent = async (silent = false) => {
+    if (!silent) { setAgentBusy(true); setAgentError(null); }
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-agent', { body: { action: 'status' } });
+      if (error) {
+        let info: any = {};
+        try { info = await (error as any).context?.json?.(); } catch { /* ignore */ }
+        throw new Error(info?.error || error.message);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setAgentStatus(data as any);
+      setAgentError(null);
+    } catch (e: any) {
+      if (!silent) setAgentError(e?.message || 'Falha ao consultar o agente');
+    } finally {
+      if (!silent) setAgentBusy(false);
+    }
+  };
+
+  const handleAgentLogout = async () => {
+    if (!confirm('Desconectar o número atual? Os alertas param até você conectar o novo.')) return;
+    setAgentBusy(true);
+    setAgentError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-agent', { body: { action: 'logout' } });
+      if (error) {
+        let info: any = {};
+        try { info = await (error as any).context?.json?.(); } catch { /* ignore */ }
+        throw new Error(info?.error || error.message);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Número desconectado. Aguarde o QR Code aparecer.');
+      setAgentStatus({ connected: false, qr: null });
+      setTimeout(() => checkAgent(true), 3000);
+    } catch (e: any) {
+      setAgentError(e?.message || 'Falha ao desconectar');
+    } finally {
+      setAgentBusy(false);
+    }
+  };
+
+  // Enquanto houver QR na tela, atualiza sozinho (o código expira em ~20s)
+  useEffect(() => {
+    if (evolutionConfig.provider !== 'webhook') return;
+    if (agentStatus?.connected !== false) return;
+    const t = setInterval(() => checkAgent(true), 8000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentStatus?.connected, evolutionConfig.provider]);
+
   const loadEvolutionConfig = async () => {
     const { data } = await supabase.from('evolution_config').select('*').limit(1).maybeSingle();
     if (data) {
@@ -1316,6 +1371,73 @@ export default function MasterPanel() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Número conectado no agente da VPS — ler QR sem abrir o terminal */}
+            {evolutionConfig.provider === 'webhook' && evolutionConfig.id && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Número do WhatsApp
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      {agentStatus === null ? (
+                        <span className="text-sm text-muted-foreground">Status desconhecido</span>
+                      ) : agentStatus.connected ? (
+                        <Badge className="bg-success/10 text-success">Conectado</Badge>
+                      ) : (
+                        <Badge className="bg-warning/10 text-warning">Desconectado</Badge>
+                      )}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => checkAgent()} disabled={agentBusy}>
+                      {agentBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Verificar
+                    </Button>
+                  </div>
+
+                  {agentError && (
+                    <p className="text-sm text-destructive">{agentError}</p>
+                  )}
+
+                  {agentStatus && !agentStatus.connected && agentStatus.qr && (
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        No celular: WhatsApp → Dispositivos conectados → Conectar dispositivo,
+                        e aponte para o código abaixo.
+                      </p>
+                      <img
+                        src={agentStatus.qr}
+                        alt="QR Code para conectar o WhatsApp"
+                        className="mx-auto w-56 h-56 rounded-lg border border-border bg-white p-2"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        O código muda a cada ~20s — esta tela atualiza sozinha.
+                      </p>
+                    </div>
+                  )}
+
+                  {agentStatus?.connected && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleAgentLogout}
+                      disabled={agentBusy}
+                    >
+                      {agentBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Conectar outro número
+                    </Button>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Trocar o número desconecta o atual na hora. Os alertas voltam a sair assim
+                    que o novo for conectado.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
