@@ -167,7 +167,8 @@ export default function MasterPanel() {
   });
   const [zapiSaving, setZapiSaving] = useState(false);
 
-  const [evolutionConfig, setEvolutionConfig] = useState<{ id?: string; base_url: string; api_key: string; instance: string; is_active: boolean }>({
+  const [evolutionConfig, setEvolutionConfig] = useState<{ id?: string; provider: 'evolution' | 'webhook'; base_url: string; api_key: string; instance: string; is_active: boolean }>({
+    provider: 'evolution',
     base_url: '',
     api_key: '',
     instance: '',
@@ -180,6 +181,7 @@ export default function MasterPanel() {
     if (data) {
       setEvolutionConfig({
         id: data.id,
+        provider: (data as any).provider === 'webhook' ? 'webhook' : 'evolution',
         base_url: data.base_url || '',
         api_key: data.api_key || '',
         instance: data.instance || '',
@@ -189,13 +191,15 @@ export default function MasterPanel() {
   };
 
   const handleSaveEvolution = async () => {
-    if (!evolutionConfig.base_url || !evolutionConfig.api_key || !evolutionConfig.instance) {
+    if (!evolutionConfig.base_url || !evolutionConfig.api_key ||
+        (evolutionConfig.provider === 'evolution' && !evolutionConfig.instance)) {
       toast.error('Preencha URL, API Key e Instância');
       return;
     }
     setEvolutionSaving(true);
     try {
       const payload = {
+        provider: evolutionConfig.provider,
         base_url: evolutionConfig.base_url.trim(),
         api_key: evolutionConfig.api_key.trim(),
         instance: evolutionConfig.instance.trim(),
@@ -210,7 +214,7 @@ export default function MasterPanel() {
         if (error) throw error;
         setEvolutionConfig((c) => ({ ...c, id: data.id }));
       }
-      toast.success('Evolution API salva com sucesso!');
+      toast.success('Conexão de WhatsApp salva com sucesso!');
     } catch (e: any) {
       console.error('Error saving evolution config:', e);
       toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
@@ -1234,40 +1238,70 @@ export default function MasterPanel() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Evolution API (WhatsApp)
+                  Conexão de WhatsApp
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    Conecte a sua Evolution API própria. Estas credenciais são usadas para
-                    enviar e receber mensagens (notificações, alertas e bater ponto pelo WhatsApp).
+                    De onde saem as mensagens (notificações de ponto, alertas de atraso
+                    e resumo diário). Trocar de provedor aqui vale na hora — nenhuma
+                    função precisa ser reimplantada.
                   </p>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>URL da API</Label>
+                  <Label>Provedor</Label>
+                  <Select
+                    value={evolutionConfig.provider}
+                    onValueChange={(v: 'evolution' | 'webhook') =>
+                      setEvolutionConfig({ ...evolutionConfig, provider: v })
+                    }
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="evolution">Evolution API</SelectItem>
+                      <SelectItem value="webhook">Meu agente (VPS)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{evolutionConfig.provider === 'webhook' ? 'URL do endpoint de envio' : 'URL da API'}</Label>
                   <Input
-                    placeholder="http://SEU_IP:8080"
+                    placeholder={evolutionConfig.provider === 'webhook' ? 'https://sua-vps.com:3001/send' : 'http://SEU_IP:8080'}
                     value={evolutionConfig.base_url}
                     onChange={(e) => setEvolutionConfig({ ...evolutionConfig, base_url: e.target.value })}
                   />
+                  {evolutionConfig.provider === 'webhook' && (
+                    <p className="text-xs text-muted-foreground">
+                      URL completa. Recebe POST com <code>{'{ phone, message }'}</code> e deve responder 2xx quando enviar.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>API Key</Label>
+                  <Label>{evolutionConfig.provider === 'webhook' ? 'Token de acesso' : 'API Key'}</Label>
                   <Input
-                    placeholder="Sua chave global da Evolution"
+                    placeholder={evolutionConfig.provider === 'webhook' ? 'Token secreto do seu agente' : 'Sua chave global da Evolution'}
                     value={evolutionConfig.api_key}
                     onChange={(e) => setEvolutionConfig({ ...evolutionConfig, api_key: e.target.value })}
                   />
+                  {evolutionConfig.provider === 'webhook' && (
+                    <p className="text-xs text-muted-foreground">
+                      Enviado no header <code>Authorization: Bearer …</code>
+                    </p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Instância</Label>
-                  <Input
-                    placeholder="Nome da instância (ex: PontaZap)"
-                    value={evolutionConfig.instance}
-                    onChange={(e) => setEvolutionConfig({ ...evolutionConfig, instance: e.target.value })}
-                  />
-                </div>
+                {evolutionConfig.provider === 'evolution' && (
+                  <div className="space-y-2">
+                    <Label>Instância</Label>
+                    <Input
+                      placeholder="Nome da instância (ex: PontaZap)"
+                      value={evolutionConfig.instance}
+                      onChange={(e) => setEvolutionConfig({ ...evolutionConfig, instance: e.target.value })}
+                    />
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="evolution-active"
@@ -1278,7 +1312,7 @@ export default function MasterPanel() {
                 </div>
                 <Button onClick={handleSaveEvolution} disabled={evolutionSaving} className="w-full">
                   {evolutionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Salvar Evolution API
+                  Salvar conexão
                 </Button>
               </CardContent>
             </Card>

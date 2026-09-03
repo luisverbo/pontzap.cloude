@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveWhatsAppConfig, sendWhatsAppMessage } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,50 +17,21 @@ interface NotificationRecipient {
   is_location_admin: boolean;
 }
 
-const formatPhoneNumber = (phone: string): string => {
-  const digits = phone.replace(/\D/g, "");
-  if (!digits.startsWith("55")) {
-    return `55${digits}`;
-  }
-  return digits;
-};
-
 const sendEvolutionMessage = async (phone: string, message: string): Promise<boolean> => {
-  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
-  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instance = Deno.env.get("EVOLUTION_INSTANCE");
-
-  if (!baseUrl || !apiKey || !instance) {
-    console.error("Evolution API credentials not configured");
+  // Usa o provedor configurado no Painel Master (Evolution ou agente próprio),
+  // com as variáveis de ambiente como reserva.
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const config = await resolveWhatsAppConfig(supabase);
+  if (!config) {
+    console.error("Nenhum provedor de WhatsApp configurado");
     return false;
   }
-
-  const formattedPhone = formatPhoneNumber(phone);
-  const url = `${baseUrl.replace(/\/$/, "")}/message/sendText/${instance}`;
-
-  console.log(`Sending response notification via Evolution API to ${formattedPhone}`);
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": apiKey },
-      body: JSON.stringify({ number: formattedPhone, text: message }),
-    });
-
-    const result = await response.json();
-    console.log("Evolution API response:", result);
-
-    if (!response.ok) {
-      console.error("Evolution API error:", result);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error sending WhatsApp message:", error);
-    return false;
-  }
+  return await sendWhatsAppMessage(phone, message, config);
 };
+
 
 // HMAC signature validation for secure public links
 const validateSignature = async (alertId: string, signature: string): Promise<boolean> => {

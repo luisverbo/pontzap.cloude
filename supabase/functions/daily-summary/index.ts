@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveWhatsAppConfig, sendWhatsAppMessage, type WhatsAppConfig } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,34 +15,12 @@ function spDateStr(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
-async function resolveEvolution(supabase: any) {
-  const { data } = await supabase.from("evolution_config").select("base_url, api_key, instance, is_active").eq("is_active", true).limit(1).maybeSingle();
-  if (data?.base_url && data?.api_key && data?.instance) {
-    return { baseUrl: String(data.base_url).replace(/\/$/, ""), apiKey: data.api_key, instance: data.instance };
-  }
-  const baseUrl = Deno.env.get("EVOLUTION_API_URL");
-  const apiKey = Deno.env.get("EVOLUTION_API_KEY");
-  const instance = Deno.env.get("EVOLUTION_INSTANCE");
-  if (baseUrl && apiKey && instance) return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instance };
-  return null;
+const resolveEvolution = resolveWhatsAppConfig;
+
+async function sendWhatsApp(cfg: WhatsAppConfig, phone: string, message: string) {
+  await sendWhatsAppMessage(phone, message, cfg);
 }
 
-function normalizePhone(raw: string): string {
-  const digits = (raw || "").replace(/\D/g, "");
-  return digits.startsWith("55") ? digits : `55${digits}`;
-}
-
-async function sendWhatsApp(cfg: { baseUrl: string; apiKey: string; instance: string }, phone: string, message: string) {
-  try {
-    await fetch(`${cfg.baseUrl}/message/sendText/${cfg.instance}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
-      body: JSON.stringify({ number: normalizePhone(phone), text: message }),
-    });
-  } catch (e) {
-    console.error("send failed:", e);
-  }
-}
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  resolveWhatsAppConfig as getEvolutionConfig,
+  sendWhatsAppMessage as sendEvolutionMessage,
+  formatPhoneNumber,
+  type WhatsAppConfig as EvolutionConfig,
+} from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,11 +31,6 @@ interface NotificationRecipient {
   receives_alerts: boolean;
 }
 
-interface EvolutionConfig {
-  baseUrl: string;
-  apiKey: string;
-  instance: string;
-}
 
 const getClockTypeLabel = (type: string): string => {
   const labels: Record<string, string> = {
@@ -56,25 +57,7 @@ const getNotificationField = (type: string): keyof NotificationRecipient => {
   return fields[type] || "receives_entry";
 };
 
-const formatPhoneNumber = (phone: string): string => {
-  const digits = phone.replace(/\D/g, "");
-  if (!digits.startsWith("55")) {
-    return `55${digits}`;
-  }
-  return digits;
-};
 
-const getEvolutionConfig = async (supabase: any): Promise<EvolutionConfig | null> => {
-  // Prefer the config saved in the master panel; fall back to env secrets.
-  try {
-    const { data } = await supabase
-      .from("evolution_config")
-      .select("base_url, api_key, instance, is_active")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-    if (data && data.base_url && data.api_key && data.instance) {
-      return { baseUrl: String(data.base_url).replace(/\/$/, ""), apiKey: data.api_key, instance: data.instance };
     }
   } catch (_e) { /* table may not exist yet */ }
 
@@ -87,43 +70,6 @@ const getEvolutionConfig = async (supabase: any): Promise<EvolutionConfig | null
   return null;
 };
 
-const sendEvolutionMessage = async (
-  phone: string,
-  message: string,
-  config: EvolutionConfig
-): Promise<boolean> => {
-  const formattedPhone = formatPhoneNumber(phone);
-  const url = `${config.baseUrl}/message/sendText/${config.instance}`;
-
-  console.log(`Sending WhatsApp via Evolution API to ${formattedPhone}`);
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": config.apiKey,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-      }),
-    });
-
-    const result = await response.json();
-    console.log("Evolution API response:", result);
-
-    if (!response.ok) {
-      console.error("Evolution API error:", result);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error sending WhatsApp message:", error);
-    return false;
-  }
-};
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
