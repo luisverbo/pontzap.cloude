@@ -10,7 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveWhatsAppConfig, sendWhatsAppMessage } from "../_shared/whatsapp.ts";
+import { resolveWhatsAppConfig, sendNotification, type TemplateSpec } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -153,6 +153,8 @@ serve(async (req: Request): Promise<Response> => {
 
     let to: string | null = null;
     let message = "";
+    let spec: TemplateSpec;
+    const kindLower = kindLabel.toLowerCase();
 
     if (notificationType === "requested") {
       to = config?.notify_whatsapp?.trim() || company?.phone?.trim() || null;
@@ -182,6 +184,18 @@ serve(async (req: Request): Promise<Response> => {
       lines.push(``);
       lines.push(`Acesse o PONTZAP para aprovar ou recusar.`);
       message = lines.join("\n");
+      spec = {
+        template: "vale_solicitado",
+        params: [
+          kindLower,
+          employeeName,
+          money(Number(request.amount)),
+          dateTime(request.created_at),
+          request.pix_key ? `${request.pix_key}${pixType ? ` (${pixType})` : ""}` : "nenhuma chave cadastrada",
+        ],
+        // O detalhe completo (motivo, titular, parcelas) vai no botão.
+        buttons: ["@details"],
+      };
     } else {
       to = profile?.phone?.trim() || null;
       const companyName = company?.name || "a empresa";
@@ -196,6 +210,7 @@ serve(async (req: Request): Promise<Response> => {
           ``,
           `Aguarde o pagamento na chave PIX cadastrada.`,
         ].filter(Boolean).join("\n");
+        spec = { template: "vale_aprovado", params: [kindLower, companyName, amount] };
       } else if (notificationType === "rejected") {
         message = [
           `❌ *PONTZAP — ${kindLabel} recusado*`,
@@ -203,6 +218,10 @@ serve(async (req: Request): Promise<Response> => {
           `Seu pedido de ${money(Number(request.amount))} não foi aprovado.`,
           request.review_note ? `\n📝 *Motivo:* ${request.review_note}` : "",
         ].filter(Boolean).join("\n");
+        spec = {
+          template: "vale_recusado",
+          params: [kindLower, money(Number(request.amount)), request.review_note || "não informado"],
+        };
       } else {
         message = [
           `💸 *PONTZAP — ${kindLabel} pago*`,
@@ -212,6 +231,11 @@ serve(async (req: Request): Promise<Response> => {
           ``,
           `Confira sua conta. Se a chave acima não for mais a sua, atualize no app imediatamente.`,
         ].filter(Boolean).join("\n");
+        spec = {
+          template: "vale_pago",
+          params: [companyName, amount, kindLower, request.pix_key || "cadastrada no aplicativo"],
+          buttons: [`paid:${request.id}:received`, `paid:${request.id}:not_received`],
+        };
       }
     }
 
@@ -228,7 +252,7 @@ serve(async (req: Request): Promise<Response> => {
       return json({ success: false, sent: false, reason: "WhatsApp não configurado" });
     }
 
-    const sent = await sendWhatsAppMessage(to, message, waConfig);
+    const sent = await sendNotification(admin, waConfig, to, message, spec!);
 
     if (sent && notificationType === "requested") {
       await admin

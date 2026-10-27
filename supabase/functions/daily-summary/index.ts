@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveWhatsAppConfig, sendWhatsAppMessage, type WhatsAppConfig } from "../_shared/whatsapp.ts";
+import { resolveWhatsAppConfig, sendNotification } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,9 +17,6 @@ function spDateStr(d: Date): string {
 
 const resolveEvolution = resolveWhatsAppConfig;
 
-async function sendWhatsApp(cfg: WhatsAppConfig, phone: string, message: string) {
-  await sendWhatsAppMessage(phone, message, cfg);
-}
 
 
 serve(async (req: Request): Promise<Response> => {
@@ -172,7 +169,14 @@ serve(async (req: Request): Promise<Response> => {
       if (pending > 0) lines.push(`⚠️ ${pending} sem registro de entrada hoje`);
       lines.push(``, `_Enviado automaticamente às ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}_`);
 
-      await sendWhatsApp(evolutionConfig, targetPhone, lines.join("\n"));
+      // API oficial: o template leva os números principais; o resumo completo
+      // vai de graça quando o dono toca em "Ver detalhes".
+      const [yy, mm, dd] = today.split("-");
+      await sendNotification(supabase, evolutionConfig, targetPhone, lines.join("\n"), {
+        template: "resumo_diario",
+        params: [`${dd}/${mm}/${yy}`, company?.name || "sua empresa", clockedCount, total, lateCount, pending],
+        buttons: ["@details"],
+      });
 
       await supabase.from("daily_summary_config").update({ last_sent_date: today }).eq("id", cfg.id);
       sent++;

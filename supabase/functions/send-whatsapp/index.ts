@@ -2,9 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   resolveWhatsAppConfig as getEvolutionConfig,
-  sendWhatsAppMessage as sendEvolutionMessage,
-  formatPhoneNumber,
-  type WhatsAppConfig as EvolutionConfig,
+  sendNotification,
 } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
@@ -114,9 +112,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Only this company's recipients — never leak notifications across tenants
     const companyId = clockRecord.employees.company_id;
-    let recipientsQuery = supabase.from("notification_recipients").select("*");
-    if (companyId) recipientsQuery = recipientsQuery.eq("company_id", companyId);
-    const { data: recipients, error: recipientsError } = await recipientsQuery;
+    // Empresa não identificada = ninguém recebe (nunca cair para "todos").
+    const { data: recipients, error: recipientsError } = companyId
+      ? await supabase.from("notification_recipients").select("*").eq("company_id", companyId)
+      : { data: [] as NotificationRecipient[], error: null };
 
     if (recipientsError) {
       console.error("Error fetching recipients:", recipientsError);
@@ -167,7 +166,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const results = await Promise.all(
       eligibleRecipients.map(async (recipient: NotificationRecipient) => {
-        const success = await sendEvolutionMessage(recipient.whatsapp, message, evolutionConfig);
+        const success = await sendNotification(supabase, evolutionConfig, recipient.whatsapp, message, {
+          template: "registro_ponto",
+          params: [companyName, clockTypeLabel, employeeName, locationName, `${formattedDate} ${formattedTime}`, methodLabel],
+          buttons: ["ack"],
+        });
         return { recipient: recipient.name, success };
       })
     );

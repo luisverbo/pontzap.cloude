@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveWhatsAppConfig, sendWhatsAppMessage } from "../_shared/whatsapp.ts";
+import { resolveWhatsAppConfig, sendNotification, type TemplateSpec } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,21 +15,18 @@ interface NotificationRecipient {
   scope_id: string | null;
   receives_alerts: boolean;
   is_location_admin: boolean;
+  company_id: string | null;
 }
 
-const sendEvolutionMessage = async (phone: string, message: string): Promise<boolean> => {
-  // Usa o provedor configurado no Painel Master (Evolution ou agente próprio),
-  // com as variáveis de ambiente como reserva.
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+const notify = async (supabase: any, phone: string, message: string, spec: TemplateSpec): Promise<boolean> => {
+  // Usa o provedor configurado no Painel Master (Evolution, agente próprio ou
+  // API oficial), com as variáveis de ambiente como reserva.
   const config = await resolveWhatsAppConfig(supabase);
   if (!config) {
     console.error("Nenhum provedor de WhatsApp configurado");
     return false;
   }
-  return await sendWhatsAppMessage(phone, message, config);
+  return await sendNotification(supabase, config, phone, message, spec);
 };
 
 
@@ -117,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get alert info
     const { data: alert, error: alertError } = await supabase
       .from("lateness_alerts")
-      .select("*, employees(user_id)")
+      .select("*, employees(user_id, company_id)")
       .eq("id", alertId)
       .maybeSingle();
 
@@ -185,10 +182,15 @@ const handler = async (req: Request): Promise<Response> => {
     const responseLabel = responseLabels[responseType] || responseType;
 
     // Get notification recipients who receive alerts (excluding síndicos)
-    const { data: recipients } = await supabase
-      .from("notification_recipients")
-      .select("*")
-      .eq("receives_alerts", true);
+    // Só gestores da empresa do funcionário — nunca de outra.
+    const companyId = alert.employees?.company_id ?? null;
+    const { data: recipients } = companyId
+      ? await supabase
+        .from("notification_recipients")
+        .select("*")
+        .eq("receives_alerts", true)
+        .eq("company_id", companyId)
+      : { data: [] as NotificationRecipient[] };
 
     if (recipients && recipients.length > 0) {
       const eligibleRecipients = recipients.filter((r: NotificationRecipient) => {
@@ -214,8 +216,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Send notifications
+      const plainLabel = responseLabel.replace(/^[^\p{L}]+/u, "");
       for (const recipient of eligibleRecipients) {
-        await sendEvolutionMessage(recipient.whatsapp, message);
+        await notify(supabase, recipient.whatsapp, message, {
+          template: "resposta_funcionario",
+          params: [employeeName, locationName, alert.scheduled_time.slice(0, 5), plainLabel, observation || "sem observação"],
+          buttons: ["ack"],
+        });
       }
 
       // Mark as notified

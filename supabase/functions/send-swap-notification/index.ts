@@ -2,9 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   resolveWhatsAppConfig as getEvolutionConfig,
-  sendWhatsAppMessage as sendEvolutionMessage,
-  formatPhoneNumber,
-  type WhatsAppConfig as EvolutionConfig,
+  sendNotification,
 } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
@@ -85,10 +83,15 @@ const handler = async (req: Request): Promise<Response> => {
     const locationName = swap.location?.name || "Local não identificado";
 
     // Get notification recipients that receive alerts
-    const { data: recipients } = await supabase
-      .from("notification_recipients")
-      .select("*")
-      .eq("receives_alerts", true);
+    // Só gestores da empresa da troca — nunca de outra.
+    const swapCompanyId = swap.requester?.company_id ?? swap.target?.company_id ?? null;
+    const { data: recipients } = swapCompanyId
+      ? await supabase
+        .from("notification_recipients")
+        .select("*")
+        .eq("receives_alerts", true)
+        .eq("company_id", swapCompanyId)
+      : { data: [] as any[] };
 
     // Get Z-API configuration
     const evolutionConfig = await getEvolutionConfig(supabase);
@@ -113,7 +116,15 @@ const handler = async (req: Request): Promise<Response> => {
           `📅 *Pelo seu dia:* ${formatDate(swap.target_date)} (${formatTime(swap.target_start_time)}-${formatTime(swap.target_end_time)})\n\n` +
           `Acesse o app para aceitar ou recusar.`;
 
-        const success = await sendEvolutionMessage(targetProfile.phone, message, evolutionConfig);
+        const success = await sendNotification(supabase, evolutionConfig, targetProfile.phone, message, {
+          template: "troca_solicitada",
+          params: [
+            requesterName,
+            `${formatDate(swap.requester_date)} (${formatTime(swap.requester_start_time)}-${formatTime(swap.requester_end_time)})`,
+            `${formatDate(swap.target_date)} (${formatTime(swap.target_start_time)}-${formatTime(swap.target_end_time)})`,
+            locationName,
+          ],
+        });
         results.push({ recipient: targetName, success });
       }
     } else if (notificationType === "accepted") {
@@ -126,7 +137,10 @@ const handler = async (req: Request): Promise<Response> => {
           `📅 *Trocado por:* ${formatDate(swap.target_date)}\n\n` +
           `Aguardando aprovação do administrador.`;
 
-        const success = await sendEvolutionMessage(requesterProfile.phone, message, evolutionConfig);
+        const success = await sendNotification(supabase, evolutionConfig, requesterProfile.phone, message, {
+          template: "troca_aceita",
+          params: [targetName, formatDate(swap.requester_date), formatDate(swap.target_date), locationName],
+        });
         results.push({ recipient: requesterName, success });
       }
 
@@ -140,7 +154,11 @@ const handler = async (req: Request): Promise<Response> => {
             `📅 *Data troca:* ${formatDate(swap.requester_date)} ↔ ${formatDate(swap.target_date)}\n\n` +
             `A troca foi aceita pelo colega e aguarda sua aprovação.`;
 
-          const success = await sendEvolutionMessage(recipient.whatsapp, message, evolutionConfig);
+          const success = await sendNotification(supabase, evolutionConfig, recipient.whatsapp, message, {
+            template: "troca_pendente",
+            params: [requesterName, targetName, formatDate(swap.requester_date), formatDate(swap.target_date), locationName],
+            buttons: ["ack"],
+          });
           results.push({ recipient: recipient.name, success });
         }
       }
@@ -155,19 +173,23 @@ const handler = async (req: Request): Promise<Response> => {
         `As escalas foram atualizadas automaticamente.`;
 
       if (requesterProfile?.phone) {
-        const success = await sendEvolutionMessage(
+        const success = await sendNotification(
+          supabase,
+          evolutionConfig,
           requesterProfile.phone,
           approvalMessage(requesterName, swap.requester_date, swap.target_date),
-          evolutionConfig
+          { template: "troca_aprovada", params: [locationName, formatDate(swap.requester_date), formatDate(swap.target_date)] },
         );
         results.push({ recipient: requesterName, success });
       }
 
       if (targetProfile?.phone) {
-        const success = await sendEvolutionMessage(
+        const success = await sendNotification(
+          supabase,
+          evolutionConfig,
           targetProfile.phone,
           approvalMessage(targetName, swap.target_date, swap.requester_date),
-          evolutionConfig
+          { template: "troca_aprovada", params: [locationName, formatDate(swap.target_date), formatDate(swap.requester_date)] },
         );
         results.push({ recipient: targetName, success });
       }
@@ -179,7 +201,10 @@ const handler = async (req: Request): Promise<Response> => {
           `A sua solicitação de troca para ${formatDate(swap.requester_date)} foi recusada.\n\n` +
           `${swap.reason ? `*Motivo:* ${swap.reason}` : ''}`;
 
-        const success = await sendEvolutionMessage(requesterProfile.phone, message, evolutionConfig);
+        const success = await sendNotification(supabase, evolutionConfig, requesterProfile.phone, message, {
+          template: "troca_recusada",
+          params: [formatDate(swap.requester_date), locationName, swap.reason || "não informado"],
+        });
         results.push({ recipient: requesterName, success });
       }
     }

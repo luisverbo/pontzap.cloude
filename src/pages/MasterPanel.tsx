@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WhatsAppOfficialSettings } from '@/components/master/WhatsAppOfficialSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
@@ -167,7 +168,7 @@ export default function MasterPanel() {
   });
   const [zapiSaving, setZapiSaving] = useState(false);
 
-  const [evolutionConfig, setEvolutionConfig] = useState<{ id?: string; provider: 'evolution' | 'webhook'; base_url: string; api_key: string; instance: string; is_active: boolean }>({
+  const [evolutionConfig, setEvolutionConfig] = useState<{ id?: string; provider: 'evolution' | 'webhook' | 'meta'; base_url: string; api_key: string; instance: string; is_active: boolean }>({
     provider: 'evolution',
     base_url: '',
     api_key: '',
@@ -236,7 +237,7 @@ export default function MasterPanel() {
     if (data) {
       setEvolutionConfig({
         id: data.id,
-        provider: (data as any).provider === 'webhook' ? 'webhook' : 'evolution',
+        provider: ['webhook', 'meta'].includes((data as any).provider) ? (data as any).provider : 'evolution',
         base_url: data.base_url || '',
         api_key: data.api_key || '',
         instance: data.instance || '',
@@ -1309,7 +1310,7 @@ export default function MasterPanel() {
                   <Label>Provedor</Label>
                   <Select
                     value={evolutionConfig.provider}
-                    onValueChange={(v: 'evolution' | 'webhook') =>
+                    onValueChange={(v: 'evolution' | 'webhook' | 'meta') =>
                       setEvolutionConfig({ ...evolutionConfig, provider: v })
                     }
                   >
@@ -1317,9 +1318,18 @@ export default function MasterPanel() {
                     <SelectContent>
                       <SelectItem value="evolution">Evolution API</SelectItem>
                       <SelectItem value="webhook">Meu agente (VPS)</SelectItem>
+                      <SelectItem value="meta">API oficial do WhatsApp (Meta)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {evolutionConfig.provider === 'meta' ? (
+                  <WhatsAppOfficialSettings
+                    configId={evolutionConfig.id}
+                    onSaved={(id) => setEvolutionConfig((c) => ({ ...c, id }))}
+                  />
+                ) : (
+                <>
 
                 <div className="space-y-2">
                   <Label>{evolutionConfig.provider === 'webhook' ? 'URL do endpoint de envio' : 'URL da API'}</Label>
@@ -1369,6 +1379,8 @@ export default function MasterPanel() {
                   {evolutionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Salvar conexão
                 </Button>
+                </>
+                )}
               </CardContent>
             </Card>
 

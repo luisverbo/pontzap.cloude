@@ -2,9 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   resolveWhatsAppConfig as getEvolutionConfig,
-  sendWhatsAppMessage as sendEvolutionMessage,
-  formatPhoneNumber,
-  type WhatsAppConfig as EvolutionConfig,
+  sendNotification,
 } from "../_shared/whatsapp.ts";
 
 const corsHeaders = {
@@ -91,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get fixed schedules for today (includes all schedule types: regular, 12x36, summer, rotating)
     const { data: fixedSchedules, error: fixedError } = await supabase
       .from("fixed_schedules")
-      .select("*, employees!inner(id, user_id, is_active, schedule_type, flexible_schedule)")
+      .select("*, employees!inner(id, user_id, company_id, is_active, schedule_type, flexible_schedule)")
       .eq("day_of_week", dayOfWeek)
       .eq("works", true)
       .eq("employees.is_active", true)
@@ -104,7 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get punctual schedules for today (substitutes/folguistas - these OVERRIDE fixed schedules)
     const { data: punctualSchedules, error: punctualError } = await supabase
       .from("punctual_schedules")
-      .select("*, employees!inner(id, user_id, is_active, schedule_type, flexible_schedule)")
+      .select("*, employees!inner(id, user_id, company_id, is_active, schedule_type, flexible_schedule)")
       .eq("date", today)
       .eq("employees.is_active", true)
       .eq("employees.flexible_schedule", false);
@@ -148,6 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       locationName: string;
       scheduledTime: string;
       toleranceMinutes: number;
+      companyId: string | null;
     }> = [];
 
     for (const schedule of allSchedules) {
@@ -260,6 +259,7 @@ const handler = async (req: Request): Promise<Response> => {
           employeeId: schedule.employee_id,
           employeeName: profile?.name || "Funcionário",
           employeePhone: profile?.phone || null,
+          companyId: schedule.employees.company_id ?? null,
           locationId: schedule.location_id,
           locationName: location?.name || "Local",
           scheduledTime: startTime,
@@ -321,7 +321,9 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send to notification recipients (admin/managers, not síndicos)
       if (recipients && recipients.length > 0) {
-        const eligibleRecipients = recipients.filter((r: NotificationRecipient) => {
+        const eligibleRecipients = recipients.filter((r: NotificationRecipient & { company_id?: string | null }) => {
+          // Só gestores da MESMA empresa do funcionário — nunca de outra.
+          if (!alert.companyId || r.company_id !== alert.companyId) return false;
           // Exclude síndicos
           if (r.is_location_admin) return false;
           
@@ -337,7 +339,11 @@ const handler = async (req: Request): Promise<Response> => {
           `O funcionário está em cima da hora e ainda não chegou. Aguardando resposta dele.`;
 
         for (const recipient of eligibleRecipients) {
-          const success = await sendEvolutionMessage(recipient.whatsapp, adminMessage, evolutionConfig);
+          const success = await sendNotification(supabase, evolutionConfig, recipient.whatsapp, adminMessage, {
+            template: "alerta_entrada",
+            params: [alert.employeeName, alert.locationName, alert.scheduledTime],
+            buttons: ["ack"],
+          });
           results.push({
             type: "admin_alert",
             recipient: recipient.name,
@@ -356,7 +362,16 @@ const handler = async (req: Request): Promise<Response> => {
           `👉 ${responseUrl}\n\n` +
           `_Informe se está a caminho ou se vai faltar._`;
 
-        const employeeSuccess = await sendEvolutionMessage(alert.employeePhone, employeeMessage, evolutionConfig);
+        // API oficial: o funcionário responde tocando no botão (sem abrir link).
+        const employeeSuccess = await sendNotification(supabase, evolutionConfig, alert.employeePhone, employeeMessage, {
+          template: "lembrete_entrada",
+          params: [alert.employeeName.split(" ")[0], alert.locationName, alert.scheduledTime],
+          buttons: [
+            `late:${alertRecord.id}:on_way`,
+            `late:${alertRecord.id}:will_be_late`,
+            `late:${alertRecord.id}:absent`,
+          ],
+        });
         results.push({
           type: "employee_alert",
           recipient: alert.employeeName,

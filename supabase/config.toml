@@ -50,3 +50,10 @@ verify_jwt = true
 [functions.condo-portal]
 # Portal do Síndico: acesso público por token + PIN (validados dentro da função)
 verify_jwt = false
+
+[functions.whatsapp-meta]
+# Webhook da Meta: validado pelo token de verificação e pela assinatura (app secret)
+verify_jwt = false
+
+[functions.whatsapp-official]
+verify_jwt = true
