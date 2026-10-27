@@ -70,7 +70,7 @@ export default function MyAdvances() {
         .maybeSingle();
       if (data) {
         setPix({
-          employeeId: data.id,
+          employeeId: (data as any).id,
           pix_key: (data as any).pix_key ?? null,
           pix_key_type: (data as any).pix_key_type ?? null,
           pix_key_owner_name: (data as any).pix_key_owner_name ?? null,

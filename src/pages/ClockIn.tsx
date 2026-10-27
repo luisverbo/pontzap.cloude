@@ -31,6 +31,10 @@ import { getCurrentPosition, GeoError, openLocationSettings, type GeoErrorKind }
 import { ensureCameraPermission } from '@/lib/nativePermissions';
 import { isNative } from '@/lib/native';
 import { scheduleForgotAlerts, cancelTodayForgotAlert } from '@/lib/forgotAlerts';
+import { useHandovers, acknowledgeHandover } from '@/hooks/useHandovers';
+import { HandoverComposer } from '@/components/handover/HandoverComposer';
+import { HandoverCard } from '@/components/handover/HandoverCard';
+import { useLocations } from '@/hooks/useLocations';
 import { ClockReceiptDialog } from '@/components/clock/ClockReceiptDialog';
 import { QRCodeScanner } from '@/components/clock/QRCodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -132,6 +136,25 @@ export default function ClockIn() {
   const [expandedPeriodos, setExpandedPeriodos] = useState<Set<string>>(new Set());
 
   const { todayRecords, clockIn, refetch } = useClockRecords(employeeData?.id);
+
+  // Passagem de turno: quem sai deixa recado (diálogo abre após a saída);
+  // quem entra vê os recados ainda não lidos do local e dá "ciente".
+  const [handoverOpen, setHandoverOpen] = useState(false);
+  const { locations: myLocations } = useLocations();
+  const { handovers, refetch: refetchHandovers } = useHandovers({ limit: 20 });
+  const pendingHandovers = handovers.filter(
+    (h) => !h.acknowledged_at && h.employee_id !== employeeData?.id
+      && (!employeeData?.locationId || h.location_id === employeeData.locationId),
+  );
+  const ackHandover = async (h: { id: string }) => {
+    if (!employeeData?.id) return;
+    try {
+      await acknowledgeHandover(h.id, employeeData.id);
+      refetchHandovers();
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message || 'desconhecido'}`);
+    }
+  };
 
   // Lembrete "esqueceu de bater o ponto": agenda notificações locais para a
   // próxima semana conforme a escala (só no app nativo)…
@@ -414,6 +437,7 @@ export default function ClockIn() {
         sendWhatsAppNotification(result.recordId, type, 'gps');
         if (result.receipt) setReceipt(result.receipt);
       }
+      if (type === 'exit') setHandoverOpen(true);
       await refetch();
     }
 
@@ -446,6 +470,7 @@ export default function ClockIn() {
         sendWhatsAppNotification(result.recordId, type, 'gps');
         if (result.receipt) setReceipt(result.receipt);
       }
+      if (type === 'exit') setHandoverOpen(true);
       // The folguista payment record is created server-side on entry.
       await refetch();
     }
@@ -469,6 +494,7 @@ export default function ClockIn() {
     if (result.success && result.recordId) {
       sendWhatsAppNotification(result.recordId, type, 'qr');
       if (result.receipt) setReceipt(result.receipt);
+      if (type === 'exit') setHandoverOpen(true);
       // The folguista payment record is created server-side on entry.
       await refetch();
     }
@@ -608,6 +634,16 @@ export default function ClockIn() {
             <Settings className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* Passagem de turno não lida — quem entra precisa ver antes de tudo */}
+        {pendingHandovers.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Recado do turno anterior</p>
+            {pendingHandovers.map((h) => (
+              <HandoverCard key={h.id} handover={h} onAcknowledge={ackHandover} showLocation={false} highlight />
+            ))}
+          </div>
+        )}
 
         {/* Clock Display — calm, high-contrast, no ambient motion */}
         <Card variant="default" className="text-center overflow-hidden">
@@ -830,6 +866,16 @@ export default function ClockIn() {
 
         {/* Selfie overlay for the direct (lunch) clock-in buttons */}
         {selfieOverlay}
+
+        {/* Passagem de turno — abre logo após a saída */}
+        <HandoverComposer
+          open={handoverOpen}
+          onOpenChange={setHandoverOpen}
+          locations={myLocations.map((l) => ({ id: l.id, name: l.name }))}
+          defaultLocationId={employeeData?.locationId}
+          hint="Saída registrada. Quer deixar um recado para quem entra no próximo turno? (encomendas, chaves, avisos)"
+          onSaved={refetchHandovers}
+        />
 
         {/* Comprovante de Ponto (Portaria 671) */}
         <ClockReceiptDialog

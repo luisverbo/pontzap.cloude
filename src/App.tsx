@@ -37,6 +37,10 @@ import Justifications from "./pages/Justifications";
 import MyShiftSwaps from "./pages/MyShiftSwaps";
 import Advances from "./pages/Advances";
 import MyAdvances from "./pages/MyAdvances";
+import CondoPortals from "./pages/CondoPortals";
+import PublicPortal from "./pages/PublicPortal";
+import Handovers from "./pages/Handovers";
+import MyHandovers from "./pages/MyHandovers";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -100,7 +104,37 @@ function AppRoutes() {
 
       {/* Link público da ocorrência — o condomínio abre sem login */}
       <Route path="/ocorrencia/:token" element={<PublicOccurrence />} />
-      
+
+      {/* Portal do Síndico — link + PIN, sem login */}
+      <Route path="/portal/:token" element={<PublicPortal />} />
+
+      <Route
+        path="/portal-sindico"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <CondoPortals />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/passagens-turno"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Handovers />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/passagem-turno"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <MyHandovers />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/dashboard"
         element={

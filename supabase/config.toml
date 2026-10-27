@@ -46,3 +46,7 @@ verify_jwt = true
 
 [functions.advance-notify]
 verify_jwt = true
+
+[functions.condo-portal]
+# Portal do Síndico: acesso público por token + PIN (validados dentro da função)
+verify_jwt = false

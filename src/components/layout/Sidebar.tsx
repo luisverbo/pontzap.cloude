@@ -33,6 +33,7 @@ import {
   FileHeart,
   ScrollText,
   Wallet,
+  MessageSquareText,
 } from 'lucide-react';
 
 interface NavItem {
@@ -58,6 +59,7 @@ const navGroups: NavGroup[] = [
       { label: 'Minhas Folgas', href: '/minhas-folgas', icon: <CalendarOff className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Justificar Falta', href: '/minhas-justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Vale / Adiantamento', href: '/meus-vales', icon: <Wallet className="h-4 w-4" />, roles: ['employee'] },
+      { label: 'Passagem de Turno', href: '/passagem-turno', icon: <MessageSquareText className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Ocorrências', href: '/minhas-ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['employee'] },
     ],
   },
@@ -74,6 +76,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Funcionários', href: '/employees', icon: <Users className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Locais de Trabalho', href: '/locations', icon: <MapPin className="h-4 w-4" />, roles: ['admin'] },
+      { label: 'Portal do Síndico', href: '/portal-sindico', icon: <Building2 className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Minha Empresa', href: '/minha-empresa', icon: <Building2 className="h-4 w-4" />, roles: ['admin'] },
     ],
   },
@@ -94,6 +97,7 @@ const navGroups: NavGroup[] = [
       { label: 'Folguistas', href: '/anotacoes', icon: <UserCheck className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Banco de Horas', href: '/banco-horas', icon: <Clock className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Ocorrências', href: '/ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Passagens de Turno', href: '/passagens-turno', icon: <MessageSquareText className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Justificativas', href: '/justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Vale / Adiantamento', href: '/vales', icon: <Wallet className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Notificações', href: '/notifications', icon: <Bell className="h-4 w-4" />, roles: ['admin'] },
