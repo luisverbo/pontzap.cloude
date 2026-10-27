@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { APP_URL } from "../_shared/appUrl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -186,7 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send welcome email with password
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (RESEND_API_KEY) {
-      const loginUrl = "https://toosmart.com.br/auth";
+      const loginUrl = `${APP_URL}/auth`;
       
       await fetch("https://api.resend.com/emails", {
         method: "POST",

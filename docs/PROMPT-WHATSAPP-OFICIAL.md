@@ -92,7 +92,7 @@ do app**.
 
 ## 6. Preencher o PONTZAP
 
-https://toosmart.com.br com a **conta master** (se não estiver logado, me peça
+https://pontzap-cloude.vercel.app com a **conta master** (se não estiver logado, me peça
 para entrar) → **Painel Master → aba de WhatsApp**:
 1. Provedor: **API oficial do WhatsApp (Meta)**.
 2. ID do número, ID da WABA, token e chave secreta → **Salvar e usar a API

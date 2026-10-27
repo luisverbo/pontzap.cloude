@@ -4,6 +4,7 @@ import {
   resolveWhatsAppConfig as getEvolutionConfig,
   sendNotification,
 } from "../_shared/whatsapp.ts";
+import { APP_URL } from "../_shared/appUrl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -297,7 +298,7 @@ const handler = async (req: Request): Promise<Response> => {
     const results: Array<{ type: string; recipient: string; employee: string; success: boolean }> = [];
 
     // Get the app URL for the response link (use production domain)
-    const appUrl = "https://toosmart.com.br";
+    const appUrl = APP_URL;
 
     for (const alert of alertsToSend) {
       // Create the lateness alert record

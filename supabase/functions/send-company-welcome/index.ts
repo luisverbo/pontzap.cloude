@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { APP_URL } from "../_shared/appUrl.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -31,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending welcome email to ${email} for company ${companyName}`);
 
-    const loginUrl = "https://toosmart.com.br/auth";
+    const loginUrl = `${APP_URL}/auth`;
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
