@@ -236,9 +236,30 @@ export default function Advances() {
     if (!companyId) { toast.error('Empresa não encontrada.'); return; }
     setConfigSaving(true);
     try {
+      // Janela do mês: 0 ou vazio conta como "qualquer dia". Se só um lado
+      // for preenchido, avisa em vez de deixar o banco recusar.
+      const from = cfgForm.window_day_from || null;
+      const to = cfgForm.window_day_to || null;
+      if ((from && !to) || (!from && to)) {
+        toast.error('Preencha os dois dias da janela, ou deixe os dois vazios.');
+        setConfigSaving(false);
+        return;
+      }
+      if ((from && (from < 1 || from > 31)) || (to && (to < 1 || to > 31))) {
+        toast.error('Os dias da janela devem ser de 1 a 31.');
+        setConfigSaving(false);
+        return;
+      }
       const payload = {
         company_id: companyId,
         ...cfgForm,
+        window_day_from: from,
+        window_day_to: to,
+        max_amount: cfgForm.max_amount || null,
+        max_total_per_month: cfgForm.max_total_per_month || null,
+        max_requests_per_month: Math.max(0, cfgForm.max_requests_per_month || 0),
+        min_days_between: Math.max(0, cfgForm.min_days_between || 0),
+        max_installments: Math.max(1, cfgForm.max_installments || 1),
         notify_whatsapp: cfgForm.notify_whatsapp?.trim() || null,
         rules_text: cfgForm.rules_text?.trim() || null,
         updated_at: new Date().toISOString(),
