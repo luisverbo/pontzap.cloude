@@ -422,7 +422,7 @@ export default function LandingPage() {
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Termos</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacidade</a>
+              <a href="/privacidade" className="text-sm text-muted-foreground hover:text-foreground">Privacidade</a>
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contato</a>
             </div>
           </div>
