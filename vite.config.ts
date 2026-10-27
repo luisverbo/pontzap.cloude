@@ -23,6 +23,9 @@ export default defineConfig(() => ({
         clientsClaim: true,
         skipWaiting: true,
         cleanupOutdatedCaches: true,
+        // Páginas estáticas públicas (servidas pela Vercel, não pelo React):
+        // o service worker não pode trocá-las pelo app.
+        navigateFallbackDenylist: [/^\/privacidade/, /^\/exclusao-de-dados/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

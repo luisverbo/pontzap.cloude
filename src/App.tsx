@@ -39,7 +39,6 @@ import Advances from "./pages/Advances";
 import MyAdvances from "./pages/MyAdvances";
 import CondoPortals from "./pages/CondoPortals";
 import PublicPortal from "./pages/PublicPortal";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Handovers from "./pages/Handovers";
 import MyHandovers from "./pages/MyHandovers";
 import BlockedAccess from "./pages/BlockedAccess";
@@ -106,8 +105,8 @@ function AppRoutes() {
       {/* Link público da ocorrência — o condomínio abre sem login */}
       <Route path="/ocorrencia/:token" element={<PublicOccurrence />} />
 
-      {/* Política de Privacidade — pública (Meta e LGPD) */}
-      <Route path="/privacidade" element={<PrivacyPolicy />} />
+      {/* /privacidade e /exclusao-de-dados são HTML estático em public/
+          (abrem sem login e sem JavaScript — exigência da Meta). */}
 
       {/* Portal do Síndico — link + PIN, sem login */}
       <Route path="/portal/:token" element={<PublicPortal />} />
