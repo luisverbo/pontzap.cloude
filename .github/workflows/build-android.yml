@@ -51,6 +51,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # O Google removeu o pacote legado "tools" do repositório do SDK; a
+          # action ainda o instala por padrão e quebra. O Gradle baixa o
+          # restante (platforms/build-tools) sozinho com as licenças aceitas.
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Add Android platform
         run: npx cap add android
