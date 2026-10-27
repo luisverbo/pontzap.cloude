@@ -23,6 +23,10 @@ interface InviteEmployeeRequest {
   position?: string;
   department?: string;
   valorDiaria?: number | null;
+  // Chave PIX (pagamento de vale/adiantamento)
+  pixKey?: string;
+  pixKeyType?: string;
+  pixKeyOwnerName?: string;
 }
 
 // Empresa interna usada para contas MASTER quando não estiverem em Modo Suporte.
@@ -76,6 +80,9 @@ serve(async (req: Request): Promise<Response> => {
       position,
       department,
       valorDiaria,
+      pixKey,
+      pixKeyType,
+      pixKeyOwnerName,
     }: InviteEmployeeRequest = await req.json();
 
     // Verificar se é MASTER
@@ -261,18 +268,24 @@ serve(async (req: Request): Promise<Response> => {
 
     // Best-effort: store legal/compliance fields. Wrapped so a not-yet-applied
     // migration can never break employee creation.
-    if (cpf || pis || admissionDate || position || department || valorDiaria != null) {
+    if (cpf || pis || admissionDate || position || department || valorDiaria != null || pixKey) {
       try {
+        const extra: Record<string, unknown> = {
+          cpf: cpf || null,
+          pis: pis || null,
+          admission_date: admissionDate || null,
+          position: position || null,
+          department: department || null,
+          valor_diaria: valorDiaria ?? null,
+        };
+        if (pixKey?.trim()) {
+          extra.pix_key = pixKey.trim();
+          extra.pix_key_type = pixKeyType || "cpf";
+          extra.pix_key_owner_name = pixKeyOwnerName?.trim() || null;
+        }
         await supabaseAdmin
           .from("employees")
-          .update({
-            cpf: cpf || null,
-            pis: pis || null,
-            admission_date: admissionDate || null,
-            position: position || null,
-            department: department || null,
-            valor_diaria: valorDiaria ?? null,
-          })
+          .update(extra)
           .eq("id", employeeData.id);
       } catch (e) {
         console.error("Could not save legal fields (migration applied?):", e);

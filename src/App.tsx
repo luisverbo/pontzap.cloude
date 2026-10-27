@@ -35,6 +35,8 @@ import AuditLog from "./pages/AuditLog";
 import MyJustifications from "./pages/MyJustifications";
 import Justifications from "./pages/Justifications";
 import MyShiftSwaps from "./pages/MyShiftSwaps";
+import Advances from "./pages/Advances";
+import MyAdvances from "./pages/MyAdvances";
 import BlockedAccess from "./pages/BlockedAccess";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -239,6 +241,24 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['employee']}>
             <MyJustifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/vales"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Advances />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/meus-vales"
+        element={
+          <ProtectedRoute allowedRoles={['employee']}>
+            <MyAdvances />
           </ProtectedRoute>
         }
       />

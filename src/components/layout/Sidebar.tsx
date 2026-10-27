@@ -32,6 +32,7 @@ import {
   CalendarOff,
   FileHeart,
   ScrollText,
+  Wallet,
 } from 'lucide-react';
 
 interface NavItem {
@@ -56,6 +57,7 @@ const navGroups: NavGroup[] = [
       { label: 'Meu Histórico', href: '/history', icon: <History className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Minhas Folgas', href: '/minhas-folgas', icon: <CalendarOff className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Justificar Falta', href: '/minhas-justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['employee'] },
+      { label: 'Vale / Adiantamento', href: '/meus-vales', icon: <Wallet className="h-4 w-4" />, roles: ['employee'] },
       { label: 'Ocorrências', href: '/minhas-ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['employee'] },
     ],
   },
@@ -93,6 +95,7 @@ const navGroups: NavGroup[] = [
       { label: 'Banco de Horas', href: '/banco-horas', icon: <Clock className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Ocorrências', href: '/ocorrencias', icon: <ClipboardList className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Justificativas', href: '/justificativas', icon: <FileHeart className="h-4 w-4" />, roles: ['admin', 'manager'] },
+      { label: 'Vale / Adiantamento', href: '/vales', icon: <Wallet className="h-4 w-4" />, roles: ['admin', 'manager'] },
       { label: 'Notificações', href: '/notifications', icon: <Bell className="h-4 w-4" />, roles: ['admin'] },
       { label: 'Financeiro', href: '/financeiro', icon: <DollarSign className="h-4 w-4" />, roles: ['admin'] },
     ],

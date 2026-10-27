@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getImpersonatedCompanyId } from '@/components/ImpersonationBar';
 import { MasterCompanyNotice } from '@/components/MasterCompanyNotice';
+import { PIX_KEY_TYPE_LABELS, type PixKeyType } from '@/hooks/useAdvances';
 
 export default function Employees() {
   const navigate = useNavigate();
@@ -65,6 +66,9 @@ export default function Employees() {
     position: '',
     department: '',
     valor_diaria: null as number | null,
+    pix_key: '',
+    pix_key_type: 'cpf' as PixKeyType,
+    pix_key_owner_name: '',
   });
 
   const [editForm, setEditForm] = useState({
@@ -76,6 +80,9 @@ export default function Employees() {
     admission_date: '',
     position: '',
     department: '',
+    pix_key: '',
+    pix_key_type: 'cpf' as PixKeyType,
+    pix_key_owner_name: '',
   });
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -115,6 +122,9 @@ export default function Employees() {
       admission_date: (employee as any).admission_date ?? '',
       position: (employee as any).position ?? '',
       department: (employee as any).department ?? '',
+      pix_key: (employee as any).pix_key ?? '',
+      pix_key_type: ((employee as any).pix_key_type ?? 'cpf') as PixKeyType,
+      pix_key_owner_name: (employee as any).pix_key_owner_name ?? '',
     });
     setEditDialogOpen(true);
   };
@@ -179,6 +189,10 @@ export default function Employees() {
         admission_date: editForm.admission_date || null,
         position: editForm.position || null,
         department: editForm.department || null,
+        // O histórico da chave (quem mudou e quando) é gravado por trigger.
+        pix_key: editForm.pix_key.trim() || null,
+        pix_key_type: editForm.pix_key.trim() ? editForm.pix_key_type : null,
+        pix_key_owner_name: editForm.pix_key_owner_name.trim() || null,
       };
       await updateEmployee(selectedEmployee.id, payload);
       setEditDialogOpen(false);
@@ -265,6 +279,9 @@ export default function Employees() {
           position: createForm.position.trim() || undefined,
           department: createForm.department.trim() || undefined,
           valorDiaria: createForm.type === 'substitute' ? createForm.valor_diaria : undefined,
+          pixKey: createForm.pix_key.trim() || undefined,
+          pixKeyType: createForm.pix_key.trim() ? createForm.pix_key_type : undefined,
+          pixKeyOwnerName: createForm.pix_key_owner_name.trim() || undefined,
         },
       });
 
@@ -299,6 +316,9 @@ export default function Employees() {
         position: '',
         department: '',
         valor_diaria: null,
+        pix_key: '',
+        pix_key_type: 'cpf',
+        pix_key_owner_name: '',
       });
       refetch();
     } catch (error: any) {
@@ -615,6 +635,39 @@ export default function Employees() {
                   />
                 </div>
               </div>
+
+              {/* Chave PIX — usada para pagar vale/adiantamento */}
+              <div className="space-y-3 rounded-lg border border-border/60 p-3">
+                <Label className="text-sm font-medium">Chave PIX</Label>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <Select
+                    value={editForm.pix_key_type}
+                    onValueChange={(v) => setEditForm({ ...editForm, pix_key_type: v as PixKeyType })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(PIX_KEY_TYPE_LABELS) as PixKeyType[]).map((t) => (
+                        <SelectItem key={t} value={t}>{PIX_KEY_TYPE_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Chave PIX"
+                    value={editForm.pix_key}
+                    onChange={(e) => setEditForm({ ...editForm, pix_key: e.target.value })}
+                  />
+                </div>
+                <Input
+                  placeholder="Nome do titular (se não for o funcionário)"
+                  value={editForm.pix_key_owner_name}
+                  onChange={(e) => setEditForm({ ...editForm, pix_key_owner_name: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Alterar aqui fica registrado como mudança feita <strong>pela empresa</strong>. O
+                  próprio funcionário confirma a chave dele a cada pedido de vale.
+                </p>
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_active"
@@ -954,6 +1007,38 @@ export default function Employees() {
                     onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Chave PIX — usada para pagar vale/adiantamento */}
+              <div className="space-y-3 rounded-lg border border-border/60 p-3">
+                <Label className="text-sm font-medium">Chave PIX (opcional)</Label>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <Select
+                    value={createForm.pix_key_type}
+                    onValueChange={(v) => setCreateForm({ ...createForm, pix_key_type: v as PixKeyType })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(PIX_KEY_TYPE_LABELS) as PixKeyType[]).map((t) => (
+                        <SelectItem key={t} value={t}>{PIX_KEY_TYPE_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Chave PIX"
+                    value={createForm.pix_key}
+                    onChange={(e) => setCreateForm({ ...createForm, pix_key: e.target.value })}
+                  />
+                </div>
+                <Input
+                  placeholder="Nome do titular (se não for o funcionário)"
+                  value={createForm.pix_key_owner_name}
+                  onChange={(e) => setCreateForm({ ...createForm, pix_key_owner_name: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  O funcionário também pode cadastrar e confirmar a chave dele pelo app. Toda
+                  alteração fica registrada com data e autor.
+                </p>
               </div>
 
               <div className="space-y-2">

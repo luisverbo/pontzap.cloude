@@ -43,3 +43,6 @@ verify_jwt = false
 
 [functions.whatsapp-agent]
 verify_jwt = true
+
+[functions.advance-notify]
+verify_jwt = true
