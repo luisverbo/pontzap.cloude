@@ -1,120 +1,141 @@
 # Prompt — configurar o número oficial do PONTZAP na Meta
 
-> Cole tudo abaixo para o Claude que tem acesso ao Chrome (Claude in Chrome),
-> no computador onde a conta da Meta (Business) já está logada.
+> Para colar num **chat novo do app do Claude**, com o projeto `pontzap.cloude`
+> aberto e o **Claude in Chrome** ligado. O Chrome precisa estar logado na conta
+> da Meta (Business) e no PONTZAP com a conta master.
 
 ---
 
-Preciso que você configure, no meu navegador Chrome, um número novo na **API
-oficial do WhatsApp (Meta Cloud API)** para o meu sistema **PONTZAP**. A conta
-da Meta Business já está logada e já tenho outros dois números funcionando lá.
-Trabalhe com calma, passo a passo, e **pare e me pergunte** antes de qualquer
-coisa que possa afetar os dois números que já existem.
+Preciso que você configure o número **+55 21 97231-1161** na **API oficial do
+WhatsApp (Meta Cloud API)** para o PONTZAP, usando o meu Chrome. Eu não sou
+programador: me explique em português simples e **pare e me pergunte** antes de
+qualquer coisa que possa afetar os dois números que já uso na Meta.
 
-**Número novo:** +55 21 97231-1161
-**Nome de exibição:** PONTZAP
-**Categoria do negócio:** Serviços profissionais (ou "Outro", se não houver)
-**Descrição:** Sistema de ponto eletrônico — avisos de registro de ponto, alertas e solicitações dos funcionários.
+## 0. Antes de abrir o navegador
 
-## Regras importantes
+1. Use o branch `claude/migrate-vercel-supabase-Mqic6` e traga o mais recente
+   (`git fetch origin claude/migrate-vercel-supabase-Mqic6` e
+   `git checkout claude/migrate-vercel-supabase-Mqic6 && git pull`).
+2. Leia para entender o que já foi construído — **não reescreva nada disso**:
+   - `supabase/functions/_shared/templates.ts` — os 15 templates (fonte única)
+   - `supabase/functions/_shared/whatsapp.ts` — envio, janela de 24 h
+   - `supabase/functions/whatsapp-meta/index.ts` — webhook (botões, status)
+   - `supabase/functions/whatsapp-official/index.ts` — ações do Painel Master
+   - `src/components/master/WhatsAppOfficialSettings.tsx` — a tela que você vai preencher
+   - `supabase/migrations/20261030000001_whatsapp_meta_official.sql`
+3. Me pergunte se eu já rodei esse SQL no Supabase. Se não, me mande o
+   conteúdo para eu colar no SQL Editor e espere eu confirmar.
+4. Confira no GitHub Actions (workflow *Deploy Edge Functions*) que o último
+   deploy passou — as funções `whatsapp-meta` e `whatsapp-official` precisam
+   existir antes do passo 7. Se falhou, leia o log e corrija.
+5. Confirme comigo que o 21 97231-1161 **não está ativo no aplicativo WhatsApp**
+   de nenhum celular (se estiver, preciso apagar a conta no app primeiro:
+   Configurações → Conta → Apagar conta).
 
-1. **Não altere nada dos dois números que já existem**, nem a URL de webhook
-   que eles usam. Se algum passo for mexer neles, pare e me pergunte.
-2. **Não crie templates manualmente.** O próprio PONTZAP cria todos pela API,
-   com o texto certo para serem aprovados como *Utilidade*.
-3. O código de verificação do número chega por **SMS ou ligação no próprio
-   21 97231-1161** — quando chegar a hora, me peça o código e espere.
-4. Antes de começar, confirme comigo que o 21 97231-1161 **não está ativo no
-   aplicativo WhatsApp** de nenhum celular (se estiver, a pessoa precisa apagar
-   a conta no app primeiro: Configurações → Conta → Apagar conta).
+## Regras
 
-## Passo 1 — Decidir onde o número vai ficar
+- **Não altere nada dos dois números que já existem**, nem a URL de webhook
+  que eles usam.
+- **Não crie templates à mão na Meta.** O PONTZAP cria os 15 pela API com o
+  botão do Painel Master.
+- O código de verificação chega por **SMS no próprio 21 97231-1161** — me peça
+  e espere.
+- **Nunca** escreva token, chave secreta ou PIN em arquivo do projeto, commit
+  ou mensagem — eles ficam só no Painel Master.
 
-Abra https://business.facebook.com → Configurações → **Contas do WhatsApp** e
-veja qual conta do WhatsApp Business (WABA) guarda os dois números atuais. Em
-seguida abra https://developers.facebook.com/apps → o app ligado a essa WABA →
-**WhatsApp → Configuração** e veja a **URL de callback do webhook**.
+**Dados do número**
+- Nome de exibição: **PONTZAP**
+- Categoria: Serviços profissionais (ou "Outro")
+- Descrição: Sistema de ponto eletrônico — avisos de registro de ponto,
+  alertas e solicitações dos funcionários.
 
-- Se a URL de callback estiver **vazia** ou já for
+## 1. Decidir onde o número vai ficar
+
+business.facebook.com → Configurações → **Contas do WhatsApp**: veja qual WABA
+guarda os dois números atuais. Depois developers.facebook.com/apps → o app
+ligado a ela → **WhatsApp → Configuração** → veja a **URL de callback**.
+
+- **Vazia** ou já igual a
   `https://hzedbdiznmlnlxnmtoho.supabase.co/functions/v1/whatsapp-meta`
-  → pode usar a mesma WABA e o mesmo app.
-- Se ela apontar para **outra ferramenta** (é o mais provável) → **não troque.**
-  Crie uma estrutura separada para o PONTZAP:
-  - um app novo em developers.facebook.com → Criar app → tipo **Empresa** →
-    nome "PONTZAP" → vincular ao mesmo portfólio empresarial → adicionar o
+  → use a mesma WABA e o mesmo app.
+- Apontando para **outra ferramenta** (o mais provável) → **não troque**. Cada
+  app só tem um webhook. Crie para o PONTZAP:
+  - um **app novo** (tipo *Empresa*, nome "PONTZAP", mesmo portfólio) com o
     produto **WhatsApp**;
-  - uma **nova conta do WhatsApp Business** chamada "PONTZAP" no mesmo
-    portfólio (o próprio fluxo do app costuma oferecer a criação);
-  - na nova WABA, em **Pagamentos**, adicione a mesma forma de pagamento que as
-    outras usam (sem isso a Meta não envia template).
+  - uma **nova WABA** "PONTZAP" no mesmo portfólio;
+  - na nova WABA → **Pagamentos**: a mesma forma de pagamento das outras.
 
-Me diga qual caminho você seguiu antes de continuar.
+Me diga qual caminho seguiu antes de continuar.
 
-## Passo 2 — Adicionar e verificar o número
+## 2. Adicionar e verificar o número
 
-WhatsApp Manager (business.facebook.com/wa/manage) → a WABA escolhida →
-**Números de telefone → Adicionar número**. Preencha nome de exibição, categoria
-e descrição acima, informe +55 21 97231-1161, escolha SMS, **me peça o código**
-e conclua. O nome "PONTZAP" entra em análise da Meta — tudo bem, segue.
+WhatsApp Manager → WABA escolhida → **Números de telefone → Adicionar número**
+com os dados acima → SMS → **me peça o código**. O nome "PONTZAP" entra em
+análise; pode seguir.
 
-## Passo 3 — Copiar os dois IDs
+## 3. Copiar os IDs
 
-Em developers.facebook.com → app → **WhatsApp → Configuração da API** (API
-Setup), selecione o número novo e anote:
-- **ID do número de telefone** (Phone number ID)
-- **ID da conta do WhatsApp Business** (WhatsApp Business Account ID)
+developers.facebook.com → app → **WhatsApp → Configuração da API** → número
+novo: **ID do número de telefone** e **ID da conta do WhatsApp Business**.
 
-## Passo 4 — Token permanente
+## 4. Token permanente
 
-business.facebook.com → Configurações → **Usuários → Usuários do sistema**.
-- Use o usuário do sistema que já existe (se houver) ou crie um chamado
-  "PONTZAP" com função **Administrador**.
-- **Atribuir ativos:** o app usado no passo 1 (controle total) e a WABA do
-  número novo (controle total).
-- **Gerar token** → app do passo 1 → validade **Nunca** → permissões
-  `whatsapp_business_messaging` e `whatsapp_business_management`.
-- Copie o token (ele só aparece uma vez).
+business.facebook.com → Configurações → **Usuários do sistema**: use um que já
+exista ou crie "PONTZAP" (Administrador). **Atribuir ativos**: o app do passo 1
+e a WABA do número (controle total). **Gerar token** → validade **Nunca** →
+permissões `whatsapp_business_messaging` e `whatsapp_business_management`.
 
-## Passo 5 — Chave secreta do app
+## 5. Chave secreta do app
 
-developers.facebook.com → app → **Configurações do app → Básico → Chave
-secreta do app** → Mostrar → copie.
+developers.facebook.com → app → **Configurações do app → Básico → Chave secreta
+do app**.
 
-## Passo 6 — Colar no PONTZAP
+## 6. Preencher o PONTZAP
 
-Abra o PONTZAP (https://toosmart.com.br) logado com a **conta master** (se não
-estiver logado, me peça para entrar). Vá em **Painel Master → aba de WhatsApp**:
-1. **Provedor:** "API oficial do WhatsApp (Meta)".
-2. Preencha **ID do número**, **ID da WABA**, **Token** e **Chave secreta do
-   app** → clique **Salvar e usar a API oficial**.
-3. Na mesma tela, copie a **URL de callback** e o **Token de verificação** que
-   aparecem na seção *Webhook*.
+https://toosmart.com.br com a **conta master** (se não estiver logado, me peça
+para entrar) → **Painel Master → aba de WhatsApp**:
+1. Provedor: **API oficial do WhatsApp (Meta)**.
+2. ID do número, ID da WABA, token e chave secreta → **Salvar e usar a API
+   oficial**.
 
-## Passo 7 — Webhook
+   ⚠️ Salvar já troca o provedor de todos os avisos. Se os templates ainda não
+   estiverem aprovados, os avisos param até a aprovação. **Me pergunte antes**
+   se prefiro fazer isso fora do horário de trabalho.
+3. Copie a **URL de callback** e o **Token de verificação** da seção *Webhook*.
 
-developers.facebook.com → app (o do passo 1) → **WhatsApp → Configuração →
-Webhook → Editar**: cole a URL e o token do passo 6 → **Verificar e salvar**.
-Depois, em *Campos do webhook*, **assine**:
-`messages`, `message_template_status_update` e `template_category_update`.
+## 7. Webhook na Meta
 
-(Lembre: se esse app for o mesmo dos outros números e a URL dele for de outra
-ferramenta, você não deveria estar aqui — volte ao passo 1.)
+App do passo 1 → **WhatsApp → Configuração → Webhook → Editar** → cole URL e
+token → **Verificar e salvar** → assine os campos `messages`,
+`message_template_status_update` e `template_category_update`.
 
-## Passo 8 — Ativar e testar (de volta no PONTZAP)
+Se a verificação falhar, veja os logs da função `whatsapp-meta` no Supabase
+(Edge Functions → whatsapp-meta → Logs) e me explique o que encontrou.
+
+## 8. Ativar, testar e criar os templates
 
 No Painel Master, seção *Número oficial*:
-1. Clique **Verificar**. Se o status vier **PENDING**, invente um PIN de 6
-   números, **me diga qual é** e clique **Ativar número**.
-2. Em *Mensagem de teste*, envie para um número que eu indicar → deve chegar
-   "Hello World" (é o template de teste padrão da Meta, em inglês).
-3. Na seção *Templates*, clique **Criar templates na Meta**. Devem aparecer 15
-   templates "Em análise". Depois de alguns minutos, clique **Atualizar status**.
+1. **Verificar.** Se o status vier **PENDING**: invente um PIN de 6 números,
+   **me diga qual é** (vou guardar) e clique **Ativar número**.
+2. *Mensagem de teste* para um número que eu indicar → deve chegar
+   "Hello World" (template padrão da Meta, em inglês).
+3. Seção *Templates* → **Criar templates na Meta** → 15 em análise. Espere
+   alguns minutos → **Atualizar status**.
 
-## No final, me mande
+## 9. Se algum template for rejeitado ou virar Marketing
 
-- qual caminho do passo 1 foi usado (mesma WABA ou separada);
-- os status: nome de exibição, número (Verificar), quantos templates
-  aprovados/em análise/rejeitados — e o motivo de qualquer rejeição;
-- o PIN de 6 números escolhido (vou guardar).
+O painel mostra o motivo. Então:
+- ajuste o texto em `supabase/functions/_shared/templates.ts`, mantendo as
+  regras escritas no topo do arquivo (evento concreto, sem tom de promoção,
+  sem começar/terminar com variável);
+- **troque o nome** acrescentando `_v2` (template já enviado não pode ser
+  editado com o mesmo nome);
+- commit e push no mesmo branch, espere o deploy e clique de novo em **Criar
+  templates na Meta**.
 
-**Não me mande o token nem a chave secreta** — eles já ficam salvos no PONTZAP.
+## No final, me diga
+
+- qual caminho do passo 1 você usou;
+- status do número (nome de exibição, qualidade, status);
+- quantos templates estão aprovados, em análise e rejeitados, com os motivos;
+- se o teste chegou.
