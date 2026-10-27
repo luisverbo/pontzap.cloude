@@ -30,3 +30,12 @@ Sorteio · Biometria no app · Simples Nacional (aguarda Anexo).
 
 **App de folgas (marketplace de folguistas de piscina)** — produto próprio,
 conectado ao PONTZAP por API. Ver conversa de 27/10 para o modelo.
+
+## Integração com o Folguista (fazer depois que o app existir — Fase 4 dele)
+
+Contrato em `docs/FOLGUISTA.md`, seção 8. Do lado do PONTZAP:
+- *Minha Empresa → Conectar ao Folguista* (API key + URL de webhook + segredo HMAC)
+- Botão "Buscar no Folguista" em Escala de Folgas e no alerta de posto vazio
+- Edge function `folguista-webhook`: `job.accepted` → cria folguista do dia;
+  `job.paid` → lança no Financeiro
+- `register-clock` → envia a batida do folguista para `POST …/punches`
