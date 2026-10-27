@@ -16,8 +16,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   Wallet, Check, X, Loader2, User, Settings, KeyRound, Copy,
-  History as HistoryIcon, ShieldCheck, AlertTriangle, Banknote,
+  History as HistoryIcon, ShieldCheck, AlertTriangle, Banknote, Users, Search,
 } from 'lucide-react';
+import { useEmployees } from '@/hooks/useEmployees';
 import {
   useAdvanceConfig,
   useAdvanceRequests,
@@ -64,6 +65,44 @@ export default function Advances() {
   const [configOpen, setConfigOpen] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
   const [cfgForm, setCfgForm] = useState({ ...DEFAULT_ADVANCE_CONFIG });
+
+  // Quem pode pedir: liberado para todos por padrão; a empresa bloqueia um a um.
+  const { employees, refetch: refetchEmployees } = useEmployees();
+  const [accessOpen, setAccessOpen] = useState(false);
+  const [accessSearch, setAccessSearch] = useState('');
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBlockedIds(new Set(employees.filter((e) => (e as any).advance_blocked).map((e) => e.id)));
+  }, [employees]);
+
+  const activeEmployees = useMemo(
+    () => employees
+      .filter((e) => e.is_active)
+      .filter((e) => (e.profile?.name || '').toLowerCase().includes(accessSearch.toLowerCase()))
+      .sort((a, b) => (a.profile?.name || '').localeCompare(b.profile?.name || '')),
+    [employees, accessSearch],
+  );
+
+  const toggleAccess = async (employeeId: string, allowed: boolean) => {
+    setTogglingId(employeeId);
+    const next = new Set(blockedIds);
+    if (allowed) next.delete(employeeId); else next.add(employeeId);
+    setBlockedIds(next);
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ advance_blocked: !allowed } as any)
+        .eq('id', employeeId);
+      if (error) throw error;
+    } catch (e: any) {
+      setBlockedIds(blockedIds);
+      toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   useEffect(() => {
     if (config) {
@@ -286,10 +325,19 @@ export default function Advances() {
           title="Vale / Adiantamento"
           description="Pedidos dos funcionários, aprovação e pagamento"
           actions={
-            <Button variant="outline" onClick={() => setConfigOpen(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Regras
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { refetchEmployees(); setAccessSearch(''); setAccessOpen(true); }}>
+                <Users className="h-4 w-4 mr-2" />
+                Quem pode pedir
+                {blockedIds.size > 0 && (
+                  <Badge variant="destructive" className="ml-2 h-5 px-1.5">{blockedIds.size}</Badge>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => setConfigOpen(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Regras
+              </Button>
+            </div>
           }
         />
 
@@ -733,7 +781,10 @@ export default function Advances() {
                 />
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
-                <Label className="text-sm">Exigir motivo</Label>
+                <div className="pr-2">
+                  <Label className="text-sm">Exigir motivo</Label>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">Desligado, o motivo é opcional</p>
+                </div>
                 <Switch
                   checked={cfgForm.require_reason}
                   onCheckedChange={(v) => setCfgForm({ ...cfgForm, require_reason: v })}
@@ -767,6 +818,55 @@ export default function Advances() {
               {configSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
               Salvar regras
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ----- Quem pode pedir ----- */}
+      <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Quem pode pedir vale</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Todos começam liberados. Desligue quem não deve pedir pelo app — a pessoa vê o aviso
+              "não liberado para você" e o pedido é recusado mesmo se tentar.
+            </p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Buscar funcionário"
+                value={accessSearch}
+                onChange={(e) => setAccessSearch(e.target.value)}
+              />
+            </div>
+            {activeEmployees.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum funcionário encontrado.</p>
+            ) : (
+              <div className="space-y-2">
+                {activeEmployees.map((emp) => {
+                  const allowed = !blockedIds.has(emp.id);
+                  return (
+                    <div
+                      key={emp.id}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${allowed ? 'border-border/60' : 'border-destructive/40 bg-destructive/5'}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{emp.profile?.name || 'Funcionário'}</p>
+                        <p className={`text-xs ${allowed ? 'text-muted-foreground' : 'text-destructive'}`}>
+                          {allowed ? 'Pode pedir' : 'Bloqueado'}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={allowed}
+                        disabled={togglingId === emp.id}
+                        onCheckedChange={(v) => toggleAccess(emp.id, v)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

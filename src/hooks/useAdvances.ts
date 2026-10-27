@@ -80,7 +80,7 @@ export const DEFAULT_ADVANCE_CONFIG: Omit<AdvanceConfig, 'company_id'> = {
   min_days_between: 0,
   window_day_from: null,
   window_day_to: null,
-  require_reason: true,
+  require_reason: false,
   max_installments: 1,
   notify_whatsapp: '',
   rules_text: null,

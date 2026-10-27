@@ -35,6 +35,7 @@ interface MyPix {
   pix_key_owner_name: string | null;
   pix_key_confirmed_at: string | null;
   pix_key_updated_at: string | null;
+  advance_blocked: boolean;
 }
 
 export default function MyAdvances() {
@@ -65,7 +66,8 @@ export default function MyAdvances() {
     try {
       const { data } = await supabase
         .from('employees')
-        .select('id, pix_key, pix_key_type, pix_key_owner_name, pix_key_confirmed_at, pix_key_updated_at')
+        // '*' para não quebrar se alguma coluna nova ainda não existir no banco
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {
@@ -76,6 +78,7 @@ export default function MyAdvances() {
           pix_key_owner_name: (data as any).pix_key_owner_name ?? null,
           pix_key_confirmed_at: (data as any).pix_key_confirmed_at ?? null,
           pix_key_updated_at: (data as any).pix_key_updated_at ?? null,
+          advance_blocked: !!(data as any).advance_blocked,
         });
       }
     } catch (e) {
@@ -195,7 +198,8 @@ export default function MyAdvances() {
   };
 
   const loading = configLoading || pixLoading;
-  const enabled = !!config?.enabled && allowedKinds.length > 0;
+  const blocked = !!pix?.advance_blocked;
+  const enabled = !!config?.enabled && allowedKinds.length > 0 && !blocked;
   const hasPendingOrApproved = requests.some((r) => r.status === 'pending' || r.status === 'approved');
 
   const limitsText = useMemo(() => {
@@ -297,9 +301,11 @@ export default function MyAdvances() {
               <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
                 <Wallet className="h-5 w-5 text-muted-foreground" />
               </div>
-              <p className="font-medium">Pedidos não liberados</p>
+              <p className="font-medium">{blocked ? 'Não liberado para você' : 'Pedidos não liberados'}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Sua empresa ainda não liberou pedidos de vale/adiantamento pelo app.
+                {blocked
+                  ? 'A empresa não liberou pedidos de vale/adiantamento para o seu cadastro. Fale com ela.'
+                  : 'Sua empresa ainda não liberou pedidos de vale/adiantamento pelo app.'}
               </p>
             </CardContent>
           </Card>
