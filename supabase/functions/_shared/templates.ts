@@ -149,14 +149,16 @@ export const TEMPLATES = {
   },
 
   vale_solicitado: {
-    name: "pontzap_vale_solicitado",
+    // v1 foi rejeitado como INCORRECT_CATEGORY: valor + chave Pix no mesmo
+    // texto pareceu cobrança. Agora o template só avisa que há uma
+    // solicitação para analisar; valor e chave vão no "Ver detalhes".
+    name: "pontzap_vale_solicitado_v2",
     purpose: "Funcionário pediu vale/adiantamento",
     audience: "WhatsApp definido nas regras de vale",
     body:
-      "Novo pedido de {{1}} registrado por {{2}} no valor de {{3}}, em {{4}}. " +
-      "Chave Pix confirmada pelo funcionário no momento do pedido: {{5}}. " +
-      "Aprove ou recuse o pedido no painel do PONTZAP.",
-    examples: ["vale", "João da Silva", "R$ 600,00", "28/10/2026 14:32", "123.456.789-00 (CPF)"],
+      "Nova solicitação registrada no PONTZAP: o funcionário {{1}} enviou uma solicitação de {{2}} " +
+      "em {{3}}. A solicitação aguarda a sua análise no painel do PONTZAP.",
+    examples: ["João da Silva", "vale", "28/10/2026 14:32"],
     footer: FOOTER,
     buttons: ["Ver detalhes"],
   },

@@ -186,14 +186,8 @@ serve(async (req: Request): Promise<Response> => {
       message = lines.join("\n");
       spec = {
         template: "vale_solicitado",
-        params: [
-          kindLower,
-          employeeName,
-          money(Number(request.amount)),
-          dateTime(request.created_at),
-          request.pix_key ? `${request.pix_key}${pixType ? ` (${pixType})` : ""}` : "nenhuma chave cadastrada",
-        ],
-        // O detalhe completo (motivo, titular, parcelas) vai no botão.
+        params: [employeeName, kindLower, dateTime(request.created_at)],
+        // Valor, chave Pix, motivo e parcelas vão no botão "Ver detalhes".
         buttons: ["@details"],
       };
     } else {
