@@ -81,15 +81,19 @@ export const TEMPLATES = {
   },
 
   resumo_diario: {
-    name: "pontzap_resumo_diario",
-    purpose: "Resumo do dia — números principais; o completo vem no botão",
+    // v1 foi reclassificado como MARKETING ("Toque em Ver detalhes para
+    // receber…" soou como chamada de engajamento). O v2 é um relatório de
+    // conta configurado pela própria empresa — utilidade clássica.
+    name: "pontzap_resumo_diario_v2",
+    purpose: "Relatório diário de ponto — números principais; o completo vem no botão",
     audience: "Dono da empresa",
     body:
-      "Resumo do dia {{1}} da empresa {{2}}: {{3}} de {{4}} funcionários registraram entrada, " +
-      "{{5}} atrasos e {{6}} sem registro de entrada. Toque em Ver detalhes para receber o resumo completo.",
+      "Relatório de ponto do dia {{1}} da empresa {{2}}, gerado conforme a configuração do resumo diário.\n\n" +
+      "Funcionários com entrada registrada: {{3}} de {{4}}\nAtrasos: {{5}}\nSem registro de entrada: {{6}}\n\n" +
+      "O relatório completo está disponível no painel do PONTZAP.",
     examples: ["28/10/2026", "Aqualife Piscinas", "12", "14", "1", "2"],
     footer: FOOTER,
-    buttons: ["Ver detalhes"],
+    buttons: ["Ver relatório completo"],
   },
 
   troca_solicitada: {

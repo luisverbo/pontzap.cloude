@@ -49,6 +49,21 @@ qualquer coisa que possa afetar os dois números que já uso na Meta.
 - Descrição: Sistema de ponto eletrônico — avisos de registro de ponto,
   alertas e solicitações dos funcionários.
 
+## Armadilha conhecida: os dois IDs da conta
+
+A Meta mostra **dois IDs** para a conta nova:
+- **Conta de mensagens** (Messaging account) — é a WABA da API: templates,
+  números, apps assinados. **É este que vai no campo "ID da WABA" do PONTZAP.**
+- **Conta do WhatsApp** (WhatsApp account), ligada ao número — usar este dá
+  "WhatsApp accounts cannot be used with this API".
+
+O usuário do sistema precisa de **acesso total às duas**: Configurações →
+Contas de mensagens → PONTZAP → Atribuir pessoas. Sem isso aparece "Object
+with ID … does not exist, cannot be loaded due to missing permissions".
+
+Sobre o teste: o template `hello_world` só sai de números de teste da Meta.
+O botão Testar do painel responde a um "oi" mandado para o número oficial.
+
 ## 1. Decidir onde o número vai ficar
 
 business.facebook.com → Configurações → **Contas do WhatsApp**: veja qual WABA
@@ -117,8 +132,8 @@ Se a verificação falhar, veja os logs da função `whatsapp-meta` no Supabase
 No Painel Master, seção *Número oficial*:
 1. **Verificar.** Se o status vier **PENDING**: invente um PIN de 6 números,
    **me diga qual é** (vou guardar) e clique **Ativar número**.
-2. *Mensagem de teste* para um número que eu indicar → deve chegar
-   "Hello World" (template padrão da Meta, em inglês).
+2. Mande um "oi" do meu WhatsApp para o número oficial e use *Mensagem de
+   teste* com o meu número → deve chegar a confirmação do PONTZAP.
 3. Seção *Templates* → **Criar templates na Meta** → 15 em análise. Espere
    alguns minutos → **Atualizar status**.
 

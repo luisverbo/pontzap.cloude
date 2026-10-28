@@ -38,7 +38,8 @@ interface TemplateRow {
   last_error?: string | null;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+// trim: a variável na Vercel veio com um TAB no começo.
+const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL || '').trim();
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/whatsapp-meta`;
 
 const randomToken = () => {
@@ -256,7 +257,7 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
     setTesting(true);
     try {
       await callOfficial({ action: 'test', phone: testPhone });
-      toast.success('Mensagem de teste enviada (template "hello_world", em inglês).');
+      toast.success('Teste enviado! Confira o WhatsApp desse número.');
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -438,6 +439,10 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
               Testar
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Antes, mande um "oi" desse número para o WhatsApp oficial do PONTZAP. O teste responde
+            essa mensagem — e assim confirma que o envio <strong>e</strong> o webhook estão funcionando.
+          </p>
         </div>
       </section>
 

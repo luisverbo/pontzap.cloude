@@ -5,7 +5,7 @@
 //   register   → ativa o número na Cloud API  { pin: "123456" }
 //   templates  → status de cada template do PONTZAP na Meta
 //   sync       → cria na Meta os templates que ainda não existem
-//   test       → manda o template "hello_world" para um número  { phone }
+//   test       → responde um "oi" recebido (janela de 24 h)  { phone }
 //
 // Funciona só com as credenciais salvas — não exige a API oficial ativa.
 // Só master users. O token da Meta nunca sai do servidor.
@@ -174,15 +174,35 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (action === "test") {
-      const phone = String(body?.phone || "");
-      if (phone.replace(/\D/g, "").length < 10) return json({ error: "Informe o número com DDD." }, 400);
-      // hello_world vem pronto em toda conta nova da Meta (inglês, aprovado).
+      const to = formatPhoneNumber(String(body?.phone || ""));
+      if (to.length < 12) return json({ error: "Informe o número com DDD." }, 400);
+
+      // Número real não pode mandar o hello_world (só números de teste da
+      // Meta). O teste usa a janela de 24 h: a pessoa manda um "oi" para o
+      // número oficial — isso também prova que o webhook está recebendo —
+      // e a resposta sai como texto livre, de graça.
+      const { data: contact } = await db
+        .from("whatsapp_contacts")
+        .select("last_inbound_at")
+        .eq("phone", to)
+        .maybeSingle();
+      const windowOpen = contact?.last_inbound_at &&
+        Date.now() - new Date(contact.last_inbound_at).getTime() < 24 * 60 * 60 * 1000;
+
+      if (!windowOpen) {
+        return json({
+          error:
+            "Primeiro mande um \"oi\" desse número para o WhatsApp oficial do PONTZAP e clique em Testar de novo. " +
+            "Se mesmo assim aparecer esta mensagem, o webhook não está recebendo as mensagens.",
+        }, 400);
+      }
+
       const r = await metaRequest(config, `${meta.phoneNumberId}/messages`, {
         body: {
           messaging_product: "whatsapp",
-          to: formatPhoneNumber(phone),
-          type: "template",
-          template: { name: "hello_world", language: { code: "en_US" } },
+          to,
+          type: "text",
+          text: { body: "✅ Teste do PONTZAP: a API oficial está enviando e o webhook está recebendo. Tudo certo!" },
         },
       });
       if (!r.ok) return json({ error: metaError(r) }, 502);
