@@ -7,11 +7,12 @@
 //   sync       → cria na Meta os templates que ainda não existem
 //   test       → manda o template "hello_world" para um número  { phone }
 //
+// Funciona só com as credenciais salvas — não exige a API oficial ativa.
 // Só master users. O token da Meta nunca sai do servidor.
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveWhatsAppConfig, metaRequest, formatPhoneNumber, type WhatsAppConfig } from "../_shared/whatsapp.ts";
+import { metaRequest, formatPhoneNumber, type WhatsAppConfig } from "../_shared/whatsapp.ts";
 import { TEMPLATES, TEMPLATE_LANGUAGE, buildCreatePayload } from "../_shared/templates.ts";
 
 const corsHeaders = {
@@ -94,11 +95,25 @@ serve(async (req: Request): Promise<Response> => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "info");
 
-    const config = await resolveWhatsAppConfig(db);
-    if (!config || config.provider !== "meta" || !config.meta) {
-      return json({ error: "Salve primeiro a configuração da API oficial (provedor Meta)." }, 400);
+    // Usa as credenciais salvas MESMO com outro provedor ativo: assim dá para
+    // registrar o número e aprovar os templates antes de trocar os avisos.
+    const { data: row } = await db.from("evolution_config").select("*").limit(1).maybeSingle();
+    if (!row?.meta_phone_number_id || !row?.meta_access_token) {
+      return json({ error: "Salve primeiro as credenciais da API oficial." }, 400);
     }
-    const meta = config.meta;
+    const config: WhatsAppConfig = {
+      provider: "meta",
+      baseUrl: "",
+      apiKey: "",
+      instance: "",
+      meta: {
+        phoneNumberId: String(row.meta_phone_number_id).trim(),
+        wabaId: String(row.meta_waba_id || "").trim(),
+        token: String(row.meta_access_token).trim(),
+        version: String(row.meta_api_version || "v21.0").trim(),
+      },
+    };
+    const meta = config.meta!;
 
     if (action === "info") {
       const r = await metaRequest(
@@ -109,7 +124,7 @@ serve(async (req: Request): Promise<Response> => {
       if (r.data?.display_phone_number) {
         await db.from("evolution_config")
           .update({ meta_display_phone: r.data.display_phone_number })
-          .eq("provider", "meta");
+          .eq("id", row.id);
       }
       return json({ phone: r.data });
     }

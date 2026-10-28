@@ -83,6 +83,10 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
   });
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Provedor que está REALMENTE enviando os avisos hoje (salvo no banco).
+  const [activeProvider, setActiveProvider] = useState<string>('evolution');
+  const [fallbackProvider, setFallbackProvider] = useState<'evolution' | 'webhook'>('webhook');
+  const [switching, setSwitching] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   const [phone, setPhone] = useState<PhoneInfo | null>(null);
@@ -109,11 +113,18 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
         meta_verify_token: d.meta_verify_token || randomToken(),
         meta_api_version: d.meta_api_version || 'v21.0',
       });
+      setActiveProvider(d.provider || 'evolution');
+      // Para onde voltar se desligar a API oficial: o agente da VPS se ele
+      // estiver configurado (instância vazia), senão a Evolution.
+      setFallbackProvider(d.base_url && !d.instance ? 'webhook' : 'evolution');
       setLoaded(true);
     })();
   }, []);
 
   const isConfigured = !!(form.meta_phone_number_id && form.meta_access_token);
+  const approved = templates.filter((t) => t.status === 'APPROVED').length;
+  const recategorized = templates.filter((t) => t.category && t.category !== 'UTILITY');
+  const metaActive = activeProvider === 'meta';
 
   const loadPhone = useCallback(async () => {
     setPhoneBusy(true);
@@ -140,6 +151,7 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
     }
   }, []);
 
+  /** Salva só as credenciais — NÃO muda quem envia os avisos. */
   const handleSave = async () => {
     if (!form.meta_phone_number_id.trim() || !form.meta_access_token.trim()) {
       toast.error('Preencha pelo menos o ID do número e o token de acesso.');
@@ -148,8 +160,6 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
     setSaving(true);
     try {
       const payload = {
-        provider: 'meta',
-        is_active: true,
         meta_phone_number_id: form.meta_phone_number_id.trim(),
         meta_waba_id: form.meta_waba_id.trim() || null,
         meta_access_token: form.meta_access_token.trim(),
@@ -162,16 +172,49 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
         const { error } = await supabase.from('evolution_config' as any).update(payload as any).eq('id', configId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('evolution_config' as any).insert(payload as any).select('id').single();
+        const { data, error } = await supabase
+          .from('evolution_config' as any)
+          .insert({ ...payload, provider: 'evolution', is_active: true } as any)
+          .select('id')
+          .single();
         if (error) throw error;
         onSaved((data as any).id);
       }
-      toast.success('API oficial salva. A partir de agora as mensagens saem por ela.');
+      toast.success('Credenciais salvas. Os avisos continuam saindo pelo provedor atual.');
       loadPhone();
     } catch (e: any) {
       toast.error(`Erro ao salvar: ${e?.message || 'desconhecido'}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Liga ou desliga a API oficial para TODOS os avisos. */
+  const handleSwitch = async (useMeta: boolean) => {
+    if (!configId) { toast.error('Salve as credenciais primeiro.'); return; }
+    if (useMeta) {
+      const pending = templates.length === 0 || approved < templates.length;
+      const msg = pending
+        ? `Só ${approved} de ${templates.length || 15} templates estão aprovados. Os avisos dos que faltam NÃO vão sair até a Meta aprovar. Ativar mesmo assim?`
+        : 'Todos os avisos passam a sair pela API oficial agora. Confirmar?';
+      if (!window.confirm(msg)) return;
+    } else if (!window.confirm('Voltar os avisos para o provedor anterior?')) {
+      return;
+    }
+    setSwitching(true);
+    try {
+      const provider = useMeta ? 'meta' : fallbackProvider;
+      const { error } = await supabase
+        .from('evolution_config' as any)
+        .update({ provider, is_active: true, updated_at: new Date().toISOString() } as any)
+        .eq('id', configId);
+      if (error) throw error;
+      setActiveProvider(provider);
+      toast.success(useMeta ? 'API oficial ativada para todos os avisos.' : 'Avisos de volta ao provedor anterior.');
+    } catch (e: any) {
+      toast.error(`Erro: ${e?.message || 'desconhecido'}`);
+    } finally {
+      setSwitching(false);
     }
   };
 
@@ -229,9 +272,6 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
   };
 
   if (!loaded) return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />;
-
-  const approved = templates.filter((t) => t.status === 'APPROVED').length;
-  const recategorized = templates.filter((t) => t.category && t.category !== 'UTILITY');
 
   return (
     <div className="space-y-6">
@@ -298,8 +338,11 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
 
         <Button onClick={handleSave} disabled={saving} className="w-full">
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Salvar e usar a API oficial
+          Salvar credenciais
         </Button>
+        <p className="text-xs text-muted-foreground text-center">
+          Salvar <strong>não</strong> troca o envio dos avisos. Isso só acontece no passo 5, lá embaixo.
+        </p>
       </section>
 
       {/* ---------- 2. Webhook ---------- */}
@@ -468,6 +511,37 @@ export function WhatsAppOfficialSettings({ configId, onSaved }: Props) {
               );
             })}
           </div>
+        )}
+      </section>
+
+      {/* ---------- 5. Ativar ---------- */}
+      <section className={`space-y-3 rounded-lg border p-4 ${metaActive ? 'border-success/50 bg-success/5' : 'border-primary/40'}`}>
+        <p className="font-medium flex items-center gap-2">
+          <Send className="h-4 w-4 text-primary" />
+          Usar a API oficial para os avisos
+        </p>
+        {metaActive ? (
+          <>
+            <p className="text-sm text-success flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" /> Ativa — todos os avisos saem pelo número oficial.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => handleSwitch(false)} disabled={switching}>
+              {switching && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Voltar ao provedor anterior
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Hoje os avisos saem pelo provedor anterior. Ative só quando os templates estiverem
+              aprovados{templates.length > 0 ? ` (${approved}/${templates.length} agora)` : ''} e o teste
+              tiver chegado.
+            </p>
+            <Button onClick={() => handleSwitch(true)} disabled={!isConfigured || !configId || switching} className="w-full">
+              {switching && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Ativar API oficial para todos os avisos
+            </Button>
+          </>
         )}
       </section>
     </div>
